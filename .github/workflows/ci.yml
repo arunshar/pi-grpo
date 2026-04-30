@@ -26,9 +26,16 @@ jobs:
         # We install only the CPU subset; vLLM and DeepSpeed need GPUs.
         run: |
           python -m pip install --upgrade pip
-          pip install pydantic pydantic-settings httpx structlog tenacity numpy scipy shapely pyproj pyyaml \
-                      torch --index-url https://download.pytorch.org/whl/cpu transformers \
-                      pytest pytest-asyncio ruff mypy hypothesis
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+          pip install \
+            fastapi 'uvicorn[standard]' \
+            pydantic pydantic-settings httpx asyncpg \
+            structlog tenacity orjson \
+            numpy scipy shapely pyproj pyyaml pandas \
+            transformers tiktoken huggingface-hub \
+            opentelemetry-api opentelemetry-sdk \
+            pytest pytest-asyncio pytest-cov \
+            ruff mypy hypothesis
       - name: ruff
         run: ruff check app observability evaluation tests spaces scripts
       - name: mypy
