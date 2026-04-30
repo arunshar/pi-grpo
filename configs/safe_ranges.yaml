@@ -1,0 +1,10 @@
+ppo:
+  lr: [1.0e-7, 5.0e-5]
+  target_kl: [0.5, 20.0]
+dpo:
+  lr: [1.0e-7, 5.0e-5]
+  beta: [0.01, 1.0]
+grpo:
+  lr: [1.0e-7, 5.0e-5]
+  target_kl: [0.5, 20.0]
+  group_size: [2, 64]

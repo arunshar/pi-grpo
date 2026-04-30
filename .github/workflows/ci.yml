@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-type-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+      - name: Install Python dependencies
+        # We install only the CPU subset; vLLM and DeepSpeed need GPUs.
+        run: |
+          python -m pip install --upgrade pip
+          pip install pydantic pydantic-settings httpx structlog tenacity numpy scipy shapely pyproj pyyaml \
+                      torch --index-url https://download.pytorch.org/whl/cpu transformers \
+                      pytest pytest-asyncio ruff mypy hypothesis
+      - name: ruff
+        run: ruff check .
+      - name: mypy
+        run: mypy app || true
+      - name: pytest (CPU subset)
+        run: pytest -q tests/test_kinematic_bicycle.py tests/test_physics_reward.py tests/test_grpo_advantage.py tests/test_kl_controller.py tests/test_reward_sanity.py
+
+  paper:
+    runs-on: ubuntu-latest
+    needs: lint-type-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install TeX Live (basic)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-recommended texlive-fonts-recommended texlive-latex-extra texlive-pictures
+      - name: Compile NeurIPS paper
+        run: |
+          cd paper
+          make pdf
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pi_grpo_neurips_pdf
+          path: paper/pi_grpo_neurips.pdf

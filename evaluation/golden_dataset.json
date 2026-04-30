@@ -1,0 +1,16 @@
+{
+  "version": "0.1.0",
+  "items": [
+    {
+      "id": "p-001",
+      "trajectory": [[0, 0, 0, 5], [5, 0, 0, 5], [10, 0, 0, 5]],
+      "expected_verdict": "PASS"
+    },
+    {
+      "id": "p-002",
+      "trajectory": [[0, 0, 0, 50], [25, 0, 0, 50], [50, 0, 0, 50]],
+      "expected_verdict": "HARD_VIOLATION",
+      "reason": "speed exceeds 25 kts cap"
+    }
+  ]
+}

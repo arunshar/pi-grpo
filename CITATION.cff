@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+title: "Pi-GRPO: Physics-Informed Reinforcement Learning with Group Relative Policy Optimization for Trajectory Generation and Reasoning"
+message: "If you use this software or refer to its design, please cite the preprint below."
+type: software
+authors:
+  - family-names: Sharma
+    given-names: Arun
+    email: arunshar@umn.edu
+    affiliation: University of Minnesota, Twin Cities
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/arunshar/pi-grpo"
+url: "https://github.com/arunshar/pi-grpo"
+license: MIT
+version: 0.1.0
+date-released: "2026-04-30"
+keywords:
+  - reinforcement-learning
+  - rlhf
+  - dpo
+  - grpo
+  - physics-informed
+  - reward-model
+  - kinematic-bicycle
+  - trajectory-generation
+preferred-citation:
+  type: article
+  title: "Pi-GRPO: Physics-Informed Reinforcement Learning with Group Relative Policy Optimization for Trajectory Generation and Reasoning"
+  authors:
+    - family-names: Sharma
+      given-names: Arun
+  year: 2026
+  journal: "arXiv preprint"
+  notes: "Replace with arXiv ID after submission."
