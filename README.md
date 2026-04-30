@@ -285,9 +285,12 @@ pi-grpo/
 A CPU-only Streamlit demo (physics reward scoring + S-KBM violation analysis + a reasoner tab backed by the free HF Inference API) lives in [`spaces/hf-demo/`](spaces/hf-demo/). To deploy:
 
 ```bash
-huggingface-cli login
-huggingface-cli repo create --type space --space_sdk streamlit pi-grpo
-git remote add space https://huggingface.co/spaces/<your-username>/pi-grpo
+hf auth login                        # paste a write-scope token from https://huggingface.co/settings/tokens
+HF_USER=$(hf auth whoami | head -1 | awk '{print $NF}')
+hf repos create pi-grpo --repo-type space --space-sdk gradio
+# (Use 'gradio' here as a placeholder; the SDK at create-time only accepts gradio/docker/static.
+#  Your README's YAML frontmatter says sdk: streamlit, so the build will reconfigure on push.)
+git remote add space https://huggingface.co/spaces/$HF_USER/pi-grpo
 git subtree push --prefix spaces/hf-demo space main
 ```
 
