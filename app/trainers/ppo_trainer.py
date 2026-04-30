@@ -9,7 +9,6 @@ matching token-level KL accounting and reward shaping correctly.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
 
 import structlog
 import torch

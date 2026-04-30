@@ -9,7 +9,6 @@ entry point that the run orchestrator can call directly.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 import structlog
 

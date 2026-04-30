@@ -22,7 +22,6 @@ error tail probability. R_pref is the preference classifier output
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 
@@ -63,12 +62,16 @@ class EmpiricalEnvelope:
     jerk_p95: float = 0.5
 
 
+_DEFAULT_WEIGHTS = RewardWeights()
+_DEFAULT_ENVELOPE = EmpiricalEnvelope()
+
+
 class PhysicsReward:
     def __init__(
         self,
         cfg: SkbmConfig,
-        weights: RewardWeights = RewardWeights(),
-        envelope: EmpiricalEnvelope = EmpiricalEnvelope(),
+        weights: RewardWeights = _DEFAULT_WEIGHTS,
+        envelope: EmpiricalEnvelope = _DEFAULT_ENVELOPE,
     ) -> None:
         self.cfg = cfg
         self.weights = weights
@@ -78,8 +81,8 @@ class PhysicsReward:
         self,
         states: np.ndarray,
         *,
-        pi_dpm_log_prob: Optional[float] = None,
-        pref_logit: Optional[float] = None,
+        pi_dpm_log_prob: float | None = None,
+        pref_logit: float | None = None,
     ) -> RewardBreakdown:
         v = evaluate(states, cfg=self.cfg)
         r_hard = -self._hard_penalty(v, states)

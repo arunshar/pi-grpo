@@ -18,11 +18,9 @@ it avoids the value-head bias that hurts PPO when the reward is sparse.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
 
 import structlog
 import torch
-import torch.nn.functional as F
 from torch.optim import AdamW
 
 from app.trainers.base import AdaptiveKLController, clip_grad_norm, cosine_lr
@@ -63,7 +61,7 @@ class GrpoTrainer:
         self.step = 0
 
     def step_update(self, batch: GrpoBatch) -> dict[str, float]:
-        B, K = batch.rewards.shape
+        _B, _K = batch.rewards.shape
         # advantages
         mean_R = batch.rewards.mean(dim=1, keepdim=True)
         std_R = batch.rewards.std(dim=1, keepdim=True).clamp_min(1e-6)

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 
-
 _EMAIL_RE = re.compile(r"\b[\w.+-]+@\w+(?:\.\w+)+\b")
 
 

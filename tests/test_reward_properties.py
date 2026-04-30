@@ -21,7 +21,6 @@ from app.components.physics_reward import (
     RewardWeights,
 )
 
-
 _v_max = 12.86  # 25 kt
 _cfg = SkbmConfig(v_max_mps=_v_max)
 _reward = PhysicsReward(

@@ -12,9 +12,7 @@ one of the three trainers. The orchestrator owns:
 from __future__ import annotations
 
 import asyncio
-import os
-import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -44,7 +42,7 @@ class RunOrchestrator:
         self._http = httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=5.0))
 
     @classmethod
-    async def bootstrap(cls, settings: Settings | None = None) -> "RunOrchestrator":
+    async def bootstrap(cls, settings: Settings | None = None) -> RunOrchestrator:
         return cls(settings or get_settings())
 
     async def shutdown(self) -> None:
@@ -59,7 +57,7 @@ class RunOrchestrator:
         run_id = uuid4().hex[:12]
         self._runs[run_id] = RunStatus(run_id=run_id, state="pending", step=0)
         self._tasks[run_id] = asyncio.create_task(self._run(run_id, payload))
-        return RunOut(run_id=run_id, submitted_at=datetime.now(timezone.utc))
+        return RunOut(run_id=run_id, submitted_at=datetime.now(UTC))
 
     async def status(self, run_id: str) -> RunStatus | None:
         return self._runs.get(run_id)
@@ -134,5 +132,10 @@ class RunOrchestrator:
             if v is None:
                 continue
             if not (lo <= float(v) <= hi):
-                raise UnsafeRange(message=f"{payload.algo}.{k} = {v} not in [{lo}, {hi}]; pass extra={{'unsafe': True}} to override")
+                raise UnsafeRange(
+                    message=(
+                        f"{payload.algo}.{k} = {v} not in [{lo}, {hi}]; "
+                        f"pass extra={{'unsafe': True}} to override"
+                    )
+                )
         return None

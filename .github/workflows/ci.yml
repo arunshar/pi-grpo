@@ -30,7 +30,7 @@ jobs:
                       torch --index-url https://download.pytorch.org/whl/cpu transformers \
                       pytest pytest-asyncio ruff mypy hypothesis
       - name: ruff
-        run: ruff check .
+        run: ruff check app observability evaluation tests spaces scripts
       - name: mypy
         run: mypy app || true
       - name: pytest (CPU subset)

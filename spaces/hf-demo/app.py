@@ -116,7 +116,7 @@ with st.sidebar:
 if uploaded is not None:
     try:
         traj = _read_csv(uploaded)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         st.error(f"Bad CSV: {exc}")
         st.stop()
 else:
@@ -202,7 +202,7 @@ with tab_reasoner:
             )
             text = out.choices[0].message.content if hasattr(out, "choices") else str(out)
             st.success(text)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             # Deterministic fallback: explain the reward decomposition
             verdict = (
                 "HARD_VIOLATION" if rb.hard < 0

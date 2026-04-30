@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +29,7 @@ def save(run_dir: Path, step: int, blob: bytes, *, meta: dict[str, Any]) -> Path
             "sha": sha,
             "path": str(out),
             "meta": meta,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }) + "\n")
     return out
 

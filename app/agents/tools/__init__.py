@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
-from . import vector_search, web_search, code_search
+from . import code_search, vector_search, web_search
 
 REGISTRY: dict[str, dict[str, Any]] = {
     "vector.search": {"description": "Search prior runs and reports", "fn": vector_search.run},

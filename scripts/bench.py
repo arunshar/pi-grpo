@@ -22,7 +22,6 @@ from app.components.physics_reward import (
 )
 from app.components.preference_builder import synthesize_from_reward
 
-
 _CFG = SkbmConfig()
 _REWARD = PhysicsReward(_CFG, weights=RewardWeights(), envelope=EmpiricalEnvelope())
 

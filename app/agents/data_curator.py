@@ -10,7 +10,6 @@ import structlog
 from app.components.preference_builder import (
     PreferencePair,
     from_hitl_jsonl,
-    synthesize_from_reward,
     write_jsonl,
 )
 

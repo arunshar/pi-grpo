@@ -9,20 +9,18 @@ swap in newer Pi-DPM checkpoints without touching the trainer.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
-import torch
-
 import structlog
+import torch
 
 log = structlog.get_logger(__name__)
 
 
 class PiDpmScorer:
-    def __init__(self, checkpoint_path: Optional[str] = None, device: str = "cuda") -> None:
+    def __init__(self, checkpoint_path: str | None = None, device: str = "cuda") -> None:
         self.device = device
-        self.module: Optional[torch.jit.ScriptModule] = None
+        self.module: torch.jit.ScriptModule | None = None
         if checkpoint_path and Path(checkpoint_path).exists():
             try:
                 self.module = torch.jit.load(checkpoint_path, map_location=device)
@@ -37,7 +35,10 @@ class PiDpmScorer:
             # offline / test stub: use a smooth proxy of -|jerk| as a stand-in
             if trajectory.shape[0] < 3:
                 return 0.0
-            v = trajectory[:, 3] if trajectory.shape[1] >= 4 else np.linalg.norm(np.diff(trajectory[:, :2], axis=0), axis=1)
+            if trajectory.shape[1] >= 4:
+                v = trajectory[:, 3]
+            else:
+                v = np.linalg.norm(np.diff(trajectory[:, :2], axis=0), axis=1)
             jerk = np.diff(np.diff(v))
             return float(-np.mean(np.abs(jerk)))
         with torch.no_grad():

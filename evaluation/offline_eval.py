@@ -10,11 +10,8 @@ Metrics:
 
 from __future__ import annotations
 
-import asyncio
 import json
-import statistics
-import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +19,7 @@ import numpy as np
 import structlog
 
 from app.components.kinematic_bicycle import SkbmConfig, evaluate
-from app.components.physics_reward import PhysicsReward, RewardWeights, EmpiricalEnvelope
+from app.components.physics_reward import EmpiricalEnvelope, PhysicsReward, RewardWeights
 
 log = structlog.get_logger(__name__)
 
@@ -54,7 +51,7 @@ def main(golden_path: str = "evaluation/golden_dataset.json") -> int:
         })
     out_dir = Path("evaluation/eval_results")
     out_dir.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     pass_rate = sum(1 for r in rows if r["got"] == r["expected"]) / max(1, len(rows))
     summary = {"pass_rate": pass_rate, "n_items": len(rows)}
     (out_dir / f"{ts}.json").write_text(json.dumps({"summary": summary, "rows": rows}, indent=2, default=str))

@@ -5,9 +5,8 @@ from __future__ import annotations
 import math
 
 import numpy as np
-import pytest
 
-from app.components.kinematic_bicycle import SkbmConfig, rollout, evaluate, step
+from app.components.kinematic_bicycle import SkbmConfig, evaluate, rollout, step
 
 
 def test_constant_velocity_straight_line() -> None:

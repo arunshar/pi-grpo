@@ -8,7 +8,6 @@ import asyncpg
 
 from app.config import get_settings
 
-
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
   run_id        TEXT PRIMARY KEY,

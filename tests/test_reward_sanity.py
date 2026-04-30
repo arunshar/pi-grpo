@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import yaml  # type: ignore[import-untyped]
 from pathlib import Path
 
 from app.reward_models.physics_reward_model import load

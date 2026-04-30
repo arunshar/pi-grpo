@@ -6,7 +6,6 @@ import re
 
 from app.errors import PiGrpoError
 
-
 _BANNED = re.compile(r"ignore (the )?(above|previous) instructions", re.I)
 
 
