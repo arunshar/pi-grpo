@@ -34,7 +34,7 @@ install: venv
 	  "ruff>=0.5" "mypy>=1.10" "huggingface-hub" "hypothesis" "bandit" "pip-audit" "pytest-benchmark"
 
 lint:
-	$(ACT) && ruff check app observability evaluation tests
+	$(ACT) && ruff check app observability evaluation tests spaces scripts
 
 type:
 	$(ACT) && mypy app || true
