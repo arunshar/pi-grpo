@@ -8,7 +8,7 @@ sdk_version: "1.36.0"
 app_file: app.py
 pinned: false
 license: mit
-short_description: Physics-aware reward + reasoner demo for the Pi-GRPO RL stack
+short_description: Physics-aware reward + reasoner demo for Pi-GRPO
 ---
 
 # Pi-GRPO — Hugging Face Space
