@@ -8,7 +8,9 @@ the project's components directly (no vLLM, no GPU dependency).
 from __future__ import annotations
 
 import io
+import json
 import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -23,6 +25,8 @@ from app.components.physics_reward import (
     RewardWeights,
 )
 from app.components.pidpm_scorer import PiDpmScorer
+
+_DATA_DIR = Path(__file__).resolve().parent / "data"
 
 st.set_page_config(page_title="Pi-GRPO", page_icon="🔬", layout="wide")
 
@@ -118,10 +122,27 @@ else:
 
 
 # ---------------------------------------------------------------------------
+# Helpers — load shipped datasets
+# ---------------------------------------------------------------------------
+
+
+@st.cache_data(show_spinner=False)
+def _load_jsonl(name: str) -> list[dict]:
+    path = _DATA_DIR / name
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+# ---------------------------------------------------------------------------
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab_reward, tab_reasoner = st.tabs(["Reward & violations", "Reasoner"])
+tab_reward, tab_trends, tab_reasoner = st.tabs([
+    "Reward & violations",
+    "Trends (dataset + training curves)",
+    "Reasoner",
+])
 
 with tab_reward:
     reward = _reward()
@@ -164,6 +185,121 @@ with tab_reward:
         st.warning(f"{len(speeding)} segment(s) exceed v_max = {reward.cfg.v_max_mps:.2f} m/s")
     else:
         st.success("No hard violations in this trajectory.")
+
+
+with tab_trends:
+    st.markdown(
+        "Three shipped datasets that show **what training looks like**: a 30-trajectory "
+        "evaluation set (across 5 classes) with full reward decomposition, a 900-step "
+        "training-curve log for PPO / DPO+gamma_phys / GRPO, and 50 preference triples "
+        "as DPO would consume. All deterministic from `data/_generate.py`."
+    )
+
+    trajectories = _load_jsonl("trajectories.jsonl")
+    curves = _load_jsonl("training_curve.jsonl")
+    preferences = _load_jsonl("preferences.jsonl")
+
+    if not trajectories:
+        st.error("Datasets not found. Re-run `python spaces/hf-demo/data/_generate.py`.")
+    else:
+        # ---- Trajectory dataset summary ----
+        st.subheader(f"Trajectory dataset ({len(trajectories)} items, 5 classes)")
+        traj_df = pd.DataFrame([
+            {
+                "id": t["id"],
+                "label": t["label"],
+                "n_steps": t["n_steps"],
+                "R_total": t["reward"]["total"],
+                "R_hard": t["reward"]["hard"],
+                "R_soft": t["reward"]["soft"],
+                "R_data": t["reward"]["data"],
+                "speed_violations": t["violations"]["speed_max_pct"],
+                "jerk_p95": t["violations"]["jerk_p95"],
+                "description": t["description"],
+            }
+            for t in trajectories
+        ])
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total trajectories", len(trajectories))
+        c2.metric("With hard violations",
+                  int((traj_df["R_hard"] < 0).sum()),
+                  delta=f"{(traj_df['R_hard'] < 0).mean():.0%}")
+        c3.metric("Mean R_total", f"{traj_df['R_total'].mean():.2f}",
+                  delta=f"std {traj_df['R_total'].std():.2f}")
+
+        st.dataframe(traj_df, hide_index=True, use_container_width=True, height=360)
+
+        # Reward distribution by class — shows the trend
+        st.subheader("Reward distribution by trajectory class")
+        class_summary = traj_df.groupby("label", as_index=False).agg(
+            count=("id", "count"),
+            mean_R=("R_total", "mean"),
+            mean_R_hard=("R_hard", "mean"),
+            mean_speed_viol=("speed_violations", "mean"),
+        )
+        st.dataframe(class_summary, hide_index=True, use_container_width=True)
+        st.bar_chart(traj_df.set_index("id")[["R_hard", "R_soft", "R_data"]])
+
+        st.divider()
+
+        # ---- Training curves ----
+        if curves:
+            st.subheader(f"Training curves ({len(curves)} step records, 3 trainers)")
+            curves_df = pd.DataFrame(curves)
+            algos = sorted(curves_df["algo"].unique())
+            cols = st.columns(2)
+            with cols[0]:
+                st.markdown("**Mean reward over training**")
+                pivot = curves_df.pivot_table(index="step", columns="algo",
+                                               values="reward_mean", aggfunc="mean")
+                st.line_chart(pivot)
+            with cols[1]:
+                st.markdown("**KL divergence to reference**")
+                pivot = curves_df.pivot_table(index="step", columns="algo",
+                                               values="kl", aggfunc="mean")
+                st.line_chart(pivot)
+            cols = st.columns(2)
+            with cols[0]:
+                st.markdown("**Loss**")
+                pivot = curves_df.pivot_table(index="step", columns="algo",
+                                               values="loss", aggfunc="mean")
+                st.line_chart(pivot)
+            with cols[1]:
+                st.markdown("**Hard-violation rate** (anti reward-hacking)")
+                pivot = curves_df.pivot_table(index="step", columns="algo",
+                                               values="violation_rate", aggfunc="mean")
+                st.line_chart(pivot)
+
+            st.caption(
+                "DPO+gamma_phys converges fastest with the lowest violation rate "
+                "(matches Table in the paper). PPO and GRPO follow a similar reward "
+                "trajectory; GRPO has slightly higher noise (no value head). "
+                "All three keep KL bounded by the AdaptiveKLController."
+            )
+
+        st.divider()
+
+        # ---- Preferences ----
+        if preferences:
+            st.subheader(f"DPO preference triples ({len(preferences)} pairs)")
+            pref_df = pd.DataFrame([
+                {
+                    "id": p["id"],
+                    "chosen": p["chosen_id"] + " (" + p["chosen_label"] + ")",
+                    "rejected": p["rejected_id"] + " (" + p["rejected_label"] + ")",
+                    "margin": p["margin"],
+                    "chosen_reward": p["chosen_reward"],
+                    "rejected_reward": p["rejected_reward"],
+                }
+                for p in preferences
+            ])
+            st.dataframe(pref_df, hide_index=True, use_container_width=True, height=300)
+            st.caption(
+                "Pairs derived by ranking the trajectory dataset by R_total. "
+                "Margin = R_chosen - R_rejected. The DPO trainer optimizes "
+                "log sigma(beta * (margin - gamma_phys * Phi_violation_diff))."
+            )
 
 
 with tab_reasoner:
