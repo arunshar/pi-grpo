@@ -60,7 +60,7 @@ target-version = "py311"
 select = ["E","F","I","UP","B","SIM","RUF"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]
-"app/prompts/templates.py" = ["RUF001"]
+"**/prompts/templates.py" = ["RUF001"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "-q --strict-markers"
