@@ -9,26 +9,20 @@ from __future__ import annotations
 
 import io
 import os
-import sys
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-# --- Make the project source importable --------------------------------------
-_HERE = Path(__file__).resolve().parent
-_ROOT = _HERE.parent.parent  # repo root
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
-
-from app.components.kinematic_bicycle import SkbmConfig, evaluate  # noqa: E402
-from app.components.physics_reward import (  # noqa: E402
+# The `app/` package is vendored alongside this file (see spaces/hf-demo/app/),
+# so it imports cleanly without sys.path manipulation.
+from app.components.kinematic_bicycle import SkbmConfig, evaluate
+from app.components.physics_reward import (
     EmpiricalEnvelope,
     PhysicsReward,
     RewardWeights,
 )
-from app.components.pidpm_scorer import PiDpmScorer  # noqa: E402
+from app.components.pidpm_scorer import PiDpmScorer
 
 st.set_page_config(page_title="Pi-GRPO", page_icon="🔬", layout="wide")
 

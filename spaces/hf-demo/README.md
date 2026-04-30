@@ -5,7 +5,7 @@ colorFrom: purple
 colorTo: pink
 sdk: streamlit
 sdk_version: "1.36.0"
-app_file: app.py
+app_file: streamlit_app.py
 pinned: false
 license: mit
 short_description: Physics-aware reward + reasoner demo for Pi-GRPO
