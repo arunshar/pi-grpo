@@ -224,7 +224,7 @@
 }
 
 % ============================================================
-\title{Pi-GRPO: Physics-Informed Reinforcement Learning with\\Group Relative Policy Optimization for\\Trajectory Generation and Reasoning}
+\title{Physics-Informed Reinforcement Learning\\for Trajectory Generation and Reasoning}
 
 \author{
   \textbf{Arun Sharma}\\
@@ -272,16 +272,22 @@ We adopt three trainers and unify them under this reward. \emph{PPO} \citep{schu
 \section{Related Work}
 \label{sec:related}
 
-\textbf{RLHF and preference optimization.} Stiennon et al.\ \citep{stiennon2020learning} introduced KL-regularized PPO for summarization preferences; Ouyang et al.\ \citep{ouyang2022training} scaled the recipe to InstructGPT; Rafailov et al.\ \citep{rafailov2023dpo} eliminated the explicit reward model with DPO; Shao et al.\ \citep{shao2024grpo} introduced GRPO with group-relative advantages, later popularized by DeepSeek-R1 \citep{deepseek2025r1}. Constitutional AI \citep{bai2022constitutional} and RLAIF \citep{lee2024rlaif} added AI-generated preferences. Pi-GRPO inherits all three families and contributes a physics-aware reward that complements rather than replaces them.
+\textbf{RLHF and preference optimization:} Stiennon et al.\ \citep{stiennon2020learning} introduced KL-regularized PPO for summarization preferences; Ouyang et al.\ \citep{ouyang2022training} scaled the recipe to InstructGPT; Rafailov et al.\ \citep{rafailov2023dpo} eliminated the explicit reward model with DPO; Shao et al.\ \citep{shao2024grpo} introduced GRPO with group-relative advantages, later popularized by DeepSeek-R1 \citep{deepseek2025r1}. Constitutional AI \citep{bai2022constitutional} and RLAIF \citep{lee2024rlaif} added AI-generated preferences. Pi-GRPO inherits all three families and contributes a physics-aware reward that complements rather than replaces them.
 
 \smallskip
-\textbf{Physics-informed deep learning.} Physics-informed neural networks \citep{raissi2019pinn}, knowledge-guided machine learning \citep{karpatne2017kgml}, and physics-informed diffusion \citep{sharma2025geoanomalies, ghosh2024kriging, yang2025gcdm} encode governing equations or kinematic priors as soft penalties or decoder structures. The S-KBM \citep{kong2015kinematic} appears as a diffusion-decoder prior in Pi-DPM. Pi-GRPO promotes the S-KBM constraint to a first-class reward term, with the hard component unbounded so the gradient prefers physical correctness over preference even at the worst case.
+\textbf{Physics-informed deep learning:} Physics-informed neural networks \citep{raissi2019pinn}, knowledge-guided machine learning \citep{karpatne2017kgml}, and physics-informed diffusion \citep{sharma2025geoanomalies, ghosh2024kriging, yang2025gcdm} encode governing equations or kinematic priors as soft penalties or decoder structures. The S-KBM \citep{kong2015kinematic} appears as a diffusion-decoder prior in Pi-DPM. Pi-GRPO promotes the S-KBM constraint to a first-class reward term, with the hard component unbounded so the gradient prefers physical correctness over preference even at the worst case.
 
 \smallskip
-\textbf{Reward hacking and safety.} Skalse et al.\ \citep{skalse2022defining} formalize reward hacking; Casper et al.\ \citep{casper2023open} survey RLHF failure modes; Eisenstein et al.\ \citep{eisenstein2023helping} analyze proxy-reward exploitation. Our hard term is a structural defense: violation magnitude is unbounded, so any policy that exploits the soft signal at the expense of the kinematic envelope is penalized in proportion to the violation. Reward dominance is monitored at the per-term level (W\&B panels per term).
+\textbf{Reward hacking and safety:} Skalse et al.\ \citep{skalse2022defining} formalize reward hacking; Casper et al.\ \citep{casper2023open} survey RLHF failure modes; Eisenstein et al.\ \citep{eisenstein2023helping} analyze proxy-reward exploitation. Earlier reward-shaping work \citep{ng1999policy, potentialbased2003} shows when auxiliary rewards can preserve optimal policies, while modern alignment work shows that proxy rewards can still be optimized in unintended directions when the proxy and true objective diverge. Pi-GRPO therefore treats physics as a first-class constraint rather than a soft preference term: violation magnitude is unbounded, so any policy that exploits the soft signal at the expense of the kinematic envelope is penalized in proportion to the violation. Reward dominance is monitored at the per-term level (W\&B panels per term), and safe-range guards prevent common destabilizing hyperparameter choices before a run starts.
 
 \smallskip
-\textbf{Agent-driven preference data.} Centific's recent multi-agent + HITL frameworks \citep{centific2025legalwiz, centific2025contragen, centific2025art} surface the human-in-the-loop verdict as a first-class signal; we consume those verdicts via the sibling agentic system GeoTrace-Agent (companion preprint), where ambiguous traces (validator-confidence below threshold) flow into a Postgres queue. The data curator joins reviewer verdicts with original prism / region payloads and emits preference triples that feed DPO directly.
+\textbf{Agent-driven preference data:} Centific's recent multi-agent + HITL frameworks \citep{centific2025legalwiz, centific2025contragen, centific2025art} surface the human-in-the-loop verdict as a first-class signal; we consume those verdicts via the sibling agentic system GeoTrace-Agent (companion preprint), where ambiguous traces (validator-confidence below threshold) flow into a Postgres queue. The data curator joins reviewer verdicts with original prism / region payloads and emits preference triples that feed DPO directly.
+
+\smallskip
+\textbf{Trajectory generation and physically constrained sequence models:} The trajectory-generation literature has moved from Markovian mobility models and recurrent neural networks toward diffusion and score-based models \citep{ho2020ddpm, song2021score, kong2021diffwave, zhu2024difftraj}. These models are expressive but can generate visually plausible paths that violate kinematic limits unless the decoder or objective contains an explicit physical prior. Parallel work in imitation learning \citep{ross2011dagger, ho2016gail}, model-based RL \citep{sutton1998rl, williams1992simple}, and constrained MDPs \citep{altman1999constrained, achiam2017cpo} offers mechanisms for safety, but most methods either need simulator rollouts or treat constraints as Lagrangian penalties that can be washed out by competing rewards. Pi-GRPO is narrower and more direct: it assumes a known kinematic envelope and makes the envelope dominate the preference objective whenever the two disagree.
+
+\smallskip
+\textbf{Serving and systems for RL fine-tuning:} Modern preference training is often gated by rollout throughput and reproducibility rather than by the algebra of the loss. PagedAttention and vLLM \citep{kwon2023vllm} make long-context online rollouts practical; LoRA/QLoRA-style parameter-efficient training \citep{hu2022lora, dettmers2023qlora} and open instruction models \citep{touvron2023llama, jiang2023mistral, qwen2024qwen2} lower the cost of adaptation. Pi-GRPO adopts this systems view: vLLM prefix caching is used for rollout throughput, a Transformers fallback supports CPU-friendly tests, and content-addressed checkpoints make every training artifact auditable.
 
 % ============================================================
 \section{Background}
@@ -301,6 +307,80 @@ We adopt three trainers and unify them under this reward. \emph{PPO} \citep{schu
 % ============================================================
 \section{Method}
 \label{sec:method}
+
+\paragraph{Problem statement:}
+Let $x$ denote a prompt or conditioning context, $y$ a model completion, and $\tau(y)$ the trajectory or trajectory-like state sequence parsed from that completion. In the generation setting, $x$ contains a partial path, domain metadata, and sampling constraints; $y$ contains future deltas or a serialized candidate path. In the reasoning setting, $x$ contains a trajectory plus a natural-language audit request; $y$ contains a verdict and a short rationale. Both modes are optimized by the same objective because the reward operates on the physical interpretation $\tau(y)$ rather than on surface form alone. A policy $\pi_\theta(y\mid x)$ is initialized from a supervised or instruction-tuned base model $\pi_0$ and regularized against a frozen reference $\pi_{\mathrm{ref}}$.
+
+\smallskip
+The training objective is a KL-regularized expected-return problem
+\begin{equation}
+  \max_{\theta}\;
+  \mathbb{E}_{x\sim\mathcal{D},\, y\sim\pi_\theta(\cdot|x)}
+  \left[R(x,y) - \beta_{\mathrm{KL}}\,
+  D_{\mathrm{KL}}\!\left(\pi_\theta(\cdot|x)\,\|\,\pi_{\mathrm{ref}}(\cdot|x)\right)\right],
+\label{eq:klobjective}
+\end{equation}
+where $R$ is Equation \ref{eq:reward}. The distinction from standard RLHF is that $R$ is not an opaque scalar produced by a learned reward model. It is a decomposed, instrumented reward with a formally privileged hard term. This matters operationally because a run can be stopped not merely when total reward falls but when one component begins to dominate or when the hard-violation rate diverges from the offline evaluator.
+
+\paragraph{Scope:}
+Pi-GRPO does not claim a new general-purpose RL algorithm. The contribution is a physics-informed system design that makes PPO, DPO, and GRPO share a single physically grounded reward path, a single rollout surface, and a single audit/checkpoint layer. The current repository includes CPU-friendly golden cases, trainer-unit checks, safe-range guards, and a Hugging Face Space demo. Long-horizon benchmark claims should be read as evaluation targets until replaced by domain-scale runs on the user's deployment data; the paper therefore phrases trend tables as diagnostic expectations rather than external leaderboard results.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=5mm and 7mm,
+  every node/.style={font=\scriptsize, align=center},
+  source/.style={draw, rounded corners=2pt, minimum width=2.2cm, minimum height=7mm, fill=gray!10},
+  block/.style={draw, rounded corners=2pt, minimum width=2.45cm, minimum height=7mm, fill=blue!8},
+  train/.style={draw, rounded corners=2pt, minimum width=2.2cm, minimum height=7mm, fill=orange!13},
+  store/.style={draw, rounded corners=2pt, minimum width=2.45cm, minimum height=7mm, fill=green!10},
+  arr/.style={-{Latex[length=2mm]}, line width=0.55pt}
+]
+  \node[source] (prompts) {prompts /\\partial traces};
+  \node[block, right=of prompts] (rollout) {rollout engine\\vLLM or HF};
+  \node[block, right=of rollout] (parse) {trajectory parser\\+ validators};
+  \node[block, right=of parse] (reward) {hybrid reward\\decomposition};
+
+  \node[train, below=11mm of rollout, xshift=-14mm] (ppo) {PPO\\value head};
+  \node[train, right=of ppo] (dpo) {DPO\\$\gamma_{\text{phys}}$};
+  \node[train, right=of dpo] (grpo) {GRPO\\group baseline};
+
+  \node[store, below=10mm of dpo] (ckpt) {content-addressed\\checkpoints};
+  \node[store, left=of ckpt] (hitl) {HITL triples\\from GeoTrace};
+  \node[store, right=of ckpt] (eval) {golden eval\\+ W\&B panels};
+
+  \draw[arr] (prompts)--(rollout);
+  \draw[arr] (rollout)--(parse);
+  \draw[arr] (parse)--(reward);
+  \draw[arr] (reward.south) -- ++(0,-3mm) -| (ppo.north);
+  \draw[arr] (reward.south) -- ++(0,-3mm) -| (dpo.north);
+  \draw[arr] (reward.south) -- ++(0,-3mm) -| (grpo.north);
+  \draw[arr] (hitl)--(dpo);
+  \draw[arr] (ppo)--(ckpt);
+  \draw[arr] (dpo)--(ckpt);
+  \draw[arr] (grpo)--(ckpt);
+  \draw[arr] (ckpt)--(eval);
+\end{tikzpicture}
+\caption{Pi-GRPO system architecture. The implementation keeps one rollout engine, one parser/validator, one reward decomposition, and three trainer heads. This prevents trainer-specific reward drift and makes PPO, DPO, and GRPO comparable under the same physical evidence.}
+\label{fig:system}
+\end{figure}
+
+\paragraph{Design invariants:}
+The repository enforces five invariants. First, the reward implementation used by PPO, DPO, and GRPO is shared; trainers cannot maintain private copies of the physics logic. Second, the S-KBM hard term is never clipped inside the reward model; clipping is allowed only at optimizer or logging boundaries. Third, the reference model is frozen and hash-checked so a KL term is always measured against a stable distribution. Fourth, checkpoints are content-addressed and accompanied by a manifest row containing run configuration, reward config, git SHA, and model hash. Fifth, all hyperparameters that are known to destabilize preference training are passed through \texttt{configs/safe\_ranges.yaml}.
+
+\paragraph{Reward dominance:}
+Suppose the preference model is bounded, $|R_{\text{pref}}(x,y)| \le B_{\text{pref}}$, and the data/soft terms are bounded by $B_{\text{aux}}$ under their configured normalizers. If a completion $y$ violates the hard envelope with excess $\Phi(y)$, the reward difference between an infeasible completion $y^{-}$ and a feasible completion $y^{+}$ satisfies
+\begin{equation}
+  R(x,y^{+}) - R(x,y^{-})
+  \ge w_{\text{hard}}\Phi(y^{-}) - 2w_{\text{pref}}B_{\text{pref}} - 2B_{\text{aux}}.
+\label{eq:dominance}
+\end{equation}
+Therefore any violation with
+\begin{equation}
+  \Phi(y^{-}) > \frac{2w_{\text{pref}}B_{\text{pref}} + 2B_{\text{aux}}}{w_{\text{hard}}}
+\label{eq:threshold}
+\end{equation}
+is dominated by the hard penalty regardless of the preference logit. This is a simple inequality, but it is the core safety property: as the violation grows, the hard term cannot be hidden by a fluent rationale or an overconfident preference classifier. The safe-range file bounds $w_{\text{pref}}/w_{\text{hard}}$ so the threshold remains in the range where the golden evaluator can detect violations.
 
 \subsection{Hybrid physics-aware reward}
 \label{sec:reward}
@@ -361,6 +441,48 @@ The data curator pulls JSONL exports from the sibling GeoTrace-Agent system, joi
 \subsection{Safe-range guards}
 The orchestrator validates per-algorithm hyperparameter ranges from \texttt{configs/safe\_ranges.yaml} (e.g., $\eta\in[10^{-7}, 5\!\cdot\!10^{-5}]$, $\beta\in[0.01, 1]$). Out-of-band values raise \texttt{UnsafeRange} unless the user passes \texttt{extra:\{unsafe:true\}}. This is a first line of defense against ranges that silently destabilize training.
 
+\paragraph{Algorithmic view:}
+Algorithm \ref{alg:grpo} gives the GRPO path because it is the most compact expression of the system's physics-first design. PPO differs by fitting a value head and computing GAE; DPO differs by consuming paired preferences rather than online rewards. The common feature is that all three paths call the same \texttt{PhysicsReward} object before an optimizer step is allowed to run.
+
+\begin{algorithm}[t]
+\caption{Physics-informed GRPO update}
+\label{alg:grpo}
+\begin{algorithmic}[1]
+\REQUIRE prompt minibatch $\mathcal{B}$, policy $\pi_\theta$, frozen reference $\pi_{\mathrm{ref}}$, group size $K$, reward $R$
+\FOR{each prompt $x \in \mathcal{B}$}
+  \STATE sample $K$ completions $y_{1:K}\sim\pi_\theta(\cdot|x)$ through the rollout engine
+  \STATE parse each completion into a trajectory or verdict payload $\tau(y_k)$
+  \STATE compute decomposed rewards $R_k = R(x,y_k)$ and hard violations $\Phi_k$
+  \STATE normalize $A_k = (R_k-\mathrm{mean}(R_{1:K}))/(\mathrm{std}(R_{1:K})+\epsilon)$
+\ENDFOR
+\STATE compute token-wise ratios $\rho_{k,t}=\pi_\theta(y_{k,t}|x,y_{k,<t})/\pi_{\theta_{\mathrm{old}}}(y_{k,t}|x,y_{k,<t})$
+\STATE minimize $-\min(\rho_{k,t}A_k,\mathrm{clip}(\rho_{k,t},1-\epsilon,1+\epsilon)A_k)+\beta_{\mathrm{KL}}D_{\mathrm{KL}}(\pi_\theta||\pi_{\mathrm{ref}})$
+\STATE reject update if safe-range, NaN, or hard-invariant checks fail; otherwise write a content-addressed checkpoint
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{DPO as a constrained preference objective:}
+For a triple $(x,y_w,y_l)$, vanilla DPO assumes the observed preference is sufficient evidence that $y_w$ should have larger implicit reward. In a physical domain this assumption is too strong because a reviewer can prefer a fluent but infeasible answer. Pi-GRPO therefore treats the preference label and the physical envelope as two signals:
+\begin{equation}
+  \Delta_{\mathrm{DPO}} =
+  \beta\left[
+  \log\frac{\pi_\theta(y_w|x)}{\pi_{\mathrm{ref}}(y_w|x)}
+  - \log\frac{\pi_\theta(y_l|x)}{\pi_{\mathrm{ref}}(y_l|x)}
+  \right]
+  - \gamma_{\mathrm{phys}}\left(\Phi(y_w)-\Phi(y_l)\right).
+\label{eq:physdpo}
+\end{equation}
+The loss is $-\log\sigma(\Delta_{\mathrm{DPO}})$. If both completions are physically valid, the physics term vanishes and the update is standard DPO. If the chosen completion violates physics more than the rejected completion, the physics term reduces the update magnitude and can flip the pair when the violation is severe. This is a conservative intervention: it does not require a learned reward model, and it does not discard human preference labels; it simply prevents the preference label from contradicting the known physical envelope without a penalty.
+
+\paragraph{PPO as the online-control path:}
+PPO is retained because it is still the cleanest online-improvement path when the reward can be evaluated directly. The implementation computes GAE with a one-step bootstrap over the value head, clips the policy ratio, and adds the adaptive KL term. The important systems decision is that the rollout worker logs every reward component before advantage normalization. This makes reward hacking visible as a term-level shift: a rising total reward with a rising hard-violation rate is a failed run even if the PPO loss decreases smoothly.
+
+\paragraph{Checkpoint and replay protocol:}
+Each checkpoint path contains the step number and a hash prefix. The manifest records the base model, reference model, reward config, safe-range file, trainer config, Python version, package lock, and git SHA. A replay command can reconstruct the evaluator inputs and reward decomposition for any saved step. This is intentionally closer to an experiment ledger than to a simple model directory. The goal is to make a hiring-manager or reviewer audit possible: a model artifact should always answer the questions ``what reward did this model see?'' and ``which hard-invariant checks passed before it was saved?''
+
+\paragraph{Security and data hygiene:}
+The repository includes input guards, content filters, and output filters around the FastAPI surface. These are not the research contribution, but they matter because HITL preference data can include vessel identifiers, coordinates, user comments, or traces from operational systems. The data curator strips reviewer-only metadata, rejects preference pairs with leaked labels in the prompt, and stores versioned JSONL files rather than mutating a single dataset in place. This is also why the paper treats HITL export as a data product: a preference triple is only useful if the provenance and filtering rules are inspectable.
+
 % ============================================================
 \section{Experiments}
 \label{sec:expts}
@@ -394,6 +516,167 @@ DPO + $\gamma_{\text{phys}}=0.20$ & 0.51  & 0.00  & 0.9 \\
 \smallskip
 \textbf{Safe-range guard.} A randomized hyperparameter sweep with 100 random samples from outside the safe range produced 100\,\% \texttt{UnsafeRange} rejections; samples inside the range produced 0 \texttt{UnsafeRange} false positives, by construction.
 
+\paragraph{Evaluation philosophy:}
+The current repository is intentionally split into fast checks and longer training runs. Fast checks are CI-friendly: unit tests verify S-KBM arithmetic, reward signs, GRPO advantage normalization, KL-controller boundedness, and API integration. Long runs should be executed with the user's preferred base model and deployment corpus. This paper therefore separates \emph{implementation evidence} from \emph{expected trend evidence}. Implementation evidence is what the repository can check quickly; trend evidence is the direction a correct run should follow when the same code is scaled to a real preference dataset. This separation is useful because it prevents paper prose from pretending that a two-case golden evaluator is a full benchmark while still documenting what a healthy run should look like.
+
+\begin{table}[t]
+\centering
+\caption{Repository-grounded acceptance checks. These are smoke/regression checks rather than external benchmarks; they protect the mathematical invariants that the later full-scale run depends on.}
+\label{tab:repo-checks}
+\begin{tabular}{p{0.30\linewidth}p{0.42\linewidth}p{0.18\linewidth}}
+\toprule
+Check & Evidence captured & Expected status \\
+\midrule
+S-KBM update & position, heading, velocity update matches discrete bicycle equations & pass \\
+Reward signs & clean path has zero hard penalty; speeding path has negative hard term & pass \\
+GRPO advantage & group-normalized advantages have near-zero mean and bounded variance & pass \\
+KL controller & coefficient increases when KL is high and decreases when KL is low & pass \\
+API integration & inference and run-submission schemas serialize through FastAPI & pass \\
+Safe ranges & out-of-range learning-rate / beta / gamma settings raise \texttt{UnsafeRange} & pass \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Expected trend table for the first full run. Values are diagnostic targets for the current method and should be replaced by measured numbers after training on the user's final corpus.}
+\label{tab:expected-trends}
+\begin{tabular}{lcccc}
+\toprule
+Method & Hard violation $\downarrow$ & Soft envelope $\downarrow$ & Pref win rate $\uparrow$ & KL / ref $\downarrow$ \\
+\midrule
+Supervised base & 0.14 & 0.31 & 0.50 & 0.00 \\
+Vanilla DPO & 0.18 & 0.28 & 0.63 & 0.11 \\
+Physics-DPO & 0.03 & 0.18 & 0.60 & 0.12 \\
+PPO + adaptive KL & 0.02 & 0.15 & 0.61 & 0.09 \\
+GRPO + hard floor & 0.01 & 0.13 & 0.62 & 0.10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Interpreting the trend:}
+The base model should have the lowest KL because it is the reference distribution. Vanilla DPO should usually improve preference win rate first, but it can raise the hard-violation rate if the preference data contains fluent infeasible answers. Physics-DPO should trade a small amount of preference margin for a large reduction in hard violations. PPO and GRPO should reduce violations further when online rewards are available; GRPO should be competitive without a value head because the group baseline turns a sparse correctness signal into within-prompt comparisons. If a future measured run disagrees with this table, the first debug targets are data leakage in the preference triples, incorrect parsing of trajectory payloads, an underweighted hard term, or a rollout distribution that collapses within each GRPO group.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\scriptsize, align=center},
+  box/.style={draw, rounded corners=2pt, minimum width=2.25cm, minimum height=7mm, fill=blue!8},
+  gate/.style={draw, diamond, aspect=2.1, minimum width=1.6cm, fill=orange!12},
+  arr/.style={-{Latex[length=2mm]}, line width=0.55pt},
+  node distance=6mm and 8mm
+]
+  \node[box] (gold) {golden cases\\p-001 / p-002};
+  \node[box, right=of gold] (parse) {parse +\\S-KBM checks};
+  \node[gate, right=of parse] (gate) {hard\\valid?};
+  \node[box, above right=7mm and 9mm of gate] (reward) {reward\\decomposition};
+  \node[box, below right=7mm and 9mm of gate] (fail) {failure report\\+ sample trace};
+  \node[box, right=23mm of gate] (trend) {trend table\\+ ablations};
+  \node[box, right=of trend] (paper) {paper metrics\\after full run};
+  \draw[arr] (gold)--(parse);
+  \draw[arr] (parse)--(gate);
+  \draw[arr] (gate)-- node[above, sloped] {yes} (reward);
+  \draw[arr] (gate)-- node[below, sloped] {no} (fail);
+  \draw[arr] (reward)--(trend);
+  \draw[arr] (fail)--(trend);
+  \draw[arr] (trend)--(paper);
+\end{tikzpicture}
+\caption{Evaluation structure. Fast golden cases check parser and physical invariants; longer runs fill the trend table and replace diagnostic targets with measured values.}
+\label{fig:evaluation}
+\end{figure}
+
+\paragraph{What would invalidate the contribution:}
+A useful methods paper should state its failure modes. The method would be weak if vanilla DPO already drove hard violations to zero on the target data, because the physics augmentation would then add complexity with little benefit. It would also be weak if the parser missed most trajectory payloads, because a physics reward cannot supervise states it cannot read. Finally, if GRPO groups collapsed to near-identical completions, within-group normalization would add variance without signal. The repository's tests cover the second issue at smoke-test scale; the first and third need the user's full run.
+
+\paragraph{Preference-data construction protocol:}
+The DPO path depends on the quality of preference triples more than on the novelty of the optimizer. Pi-GRPO therefore treats the preference builder as an experimental object rather than as a preprocessing script. Each raw HITL record contains the original query, the trajectory or candidate region that triggered review, the validator output, reviewer verdict, confidence, and optional reviewer comment. The curator first normalizes units and coordinate frames, then removes records whose verdict is not aligned to an interpretable physical or semantic criterion. It next forms candidate pairs by grouping completions with the same prompt and domain. A pair $(y_i,y_j)$ is admitted when one of three margins is positive: reviewer margin, physics margin, or data-likelihood margin. Reviewer margin dominates only when neither completion is hard-infeasible; otherwise the hard-infeasible completion is automatically the rejected item. This rule is intentionally conservative because one mislabeled infeasible positive can teach the policy to narrate around a violation.
+
+\smallskip
+The curator writes three metadata fields that should remain in all future datasets: \texttt{pair\_source}, \texttt{margin\_type}, and \texttt{physics\_delta}. The first distinguishes human, synthetic, and mixed pairs. The second records whether the chosen/rejected decision came from reviewer preference, hard-violation contrast, soft-envelope contrast, or Pi-DPM tail score. The third stores $\Phi(y_l)-\Phi(y_w)$ so later analysis can separate semantic alignment gains from physical-feasibility gains. If the future full run shows improved preference win rate but no change in physics delta, the data was probably too easy; if physics delta improves but preference win rate collapses, $\gamma_{\text{phys}}$ or $w_{\text{hard}}$ is too aggressive.
+
+\paragraph{Trainer-specific diagnostic curves:}
+The repository's training guide already lists common symptoms. The paper version makes them explicit because they are the curves that should appear in a real experiment log. PPO should log total reward, hard reward, value loss, policy loss, entropy, approximate KL, and clip fraction. A healthy PPO run has slowly rising total reward, stable or decreasing hard violation, bounded KL, and a clip fraction that does not pin at zero or one. DPO should log preference loss, chosen/rejected log-prob margin, $\Phi(y_w)$, $\Phi(y_l)$, and the physics-adjusted margin from Equation \ref{eq:physdpo}. A healthy Physics-DPO run decreases loss while increasing the physics-adjusted margin; a run that only increases the vanilla margin is likely optimizing fluency rather than feasibility. GRPO should log within-group reward standard deviation, advantage range, per-prompt hard-violation count, and KL. If the within-group standard deviation collapses to zero, the update is effectively noise; if it explodes, the reward scale needs normalization or the hard term is too sparse.
+
+\begin{table}[t]
+\centering
+\caption{Ablation matrix for the first serious run. Each row removes one structural component and predicts the most likely failure signal.}
+\label{tab:ablation-matrix}
+\begin{tabular}{p{0.28\linewidth}p{0.34\linewidth}p{0.27\linewidth}}
+\toprule
+Ablation & Expected measurement shift & Interpretation \\
+\midrule
+Remove hard term & hard-violation rate rises even when reward improves & preference model is not a physics validator \\
+Clip hard term inside reward & severe violations become indistinguishable from mild ones & hard floor loses dominance \\
+Set $\gamma_{\text{phys}}=0$ in DPO & higher preference margin, worse physics delta & preference labels contain infeasible positives \\
+Disable adaptive KL & PPO KL spikes and value loss destabilizes & policy update too aggressive \\
+Reduce GRPO group to $K=2$ & high variance in group advantages & weak baseline estimate \\
+Disable prefix cache & rollout wall time rises with prompt length & serving bottleneck rather than algorithm bottleneck \\
+Remove safe ranges & failed runs start silently with extreme beta or LR & user error becomes experiment noise \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Qualitative audit cases:}
+Two examples are enough for the current repository-grounded evaluation because they explain the expected behavior without pretending to be a benchmark. In the clean case, a prompt provides a vessel track whose implied speed stays below the domain cap, acceleration is smooth, and heading changes fit the S-KBM envelope. The correct answer is not merely \textsc{pass}; it should cite the maximum implied speed, the absence of hard violations, and the fact that soft curvature/jerk penalties remain within the empirical envelope. In the speeding case, a prompt contains two anchors separated by a short time interval, forcing an impossible speed. The correct answer is \textsc{hard\_violation}; a good rationale identifies the minimal required speed and explains that preference or data likelihood cannot override the hard envelope. The second case is the one that catches reward hacking: a fluent answer that says ``likely plausible'' should receive a low reward even if the wording sounds confident.
+
+\begin{table}[t]
+\centering
+\caption{Expected qualitative behavior on the two built-in golden cases. The wording is schematic; the repository tests the structured verdict and reward decomposition.}
+\label{tab:qualitative}
+\begin{tabular}{p{0.17\linewidth}p{0.24\linewidth}p{0.22\linewidth}p{0.24\linewidth}}
+\toprule
+Case & Physical signal & Correct verdict & Healthy rationale \\
+\midrule
+\texttt{p-001} clean & required speed and curvature remain inside envelope & \textsc{pass} & cites zero hard penalty and bounded soft statistics \\
+\texttt{p-002} speeding & required speed exceeds configured cap & \textsc{hard\_violation} & cites infeasible speed and refuses to average it away \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Trajectory-generation protocol:}
+For generation rather than reasoning, the policy emits future position deltas. A full evaluation should measure (i) hard-violation rate, (ii) soft-envelope p95 deviation, (iii) Pi-DPM reconstruction tail score, (iv) displacement error against held-out future traces when ground truth is available, and (v) diversity under a fixed prompt. The crucial comparison is not merely whether Pi-GRPO improves displacement error; a diffusion baseline can do that while still emitting rare impossible turns. The relevant question is whether the method improves or preserves displacement error while reducing violations and preserving diversity. A useful first table would compare DiffTraj, Pi-DPM, supervised autoregressive decoding, PPO, and GRPO under the same parser and envelope. The expected outcome is that Pi-DPM has strong data likelihood, supervised decoding has reasonable semantics but nonzero violations, and GRPO has the best hard-feasibility profile when the reward is correctly tuned.
+
+\paragraph{Reasoning-policy protocol:}
+For the verdicting task, the unit of evaluation is not a generated point but a structured judgment. A full run should measure verdict accuracy, hard-violation recall, false-positive rate on clean tracks, rationale consistency, and abstention/HITL rate. The most important metric is hard-violation recall at a controlled false-positive rate because missing an impossible trajectory is worse than sending a borderline trace to HITL. A second metric is contradiction rate between rationale and verdict; for example, a model that outputs \textsc{pass} but says the vessel exceeded the cap should fail even if the final token matches the label. The output filter can catch some contradictions, but the trainer should learn to avoid them because contradiction repair after generation is weaker than direct supervision.
+
+\paragraph{Reward-scale calibration:}
+The hard term is unbounded, but the optimizer still sees finite minibatches. In practice the reward scaler should normalize soft, data, and preference terms to comparable ranges while leaving the hard term in violation units. Let $\hat{R}_i=(R_i-\mu_i)/(\sigma_i+\epsilon)$ for $i\in\{\text{soft},\text{data},\text{pref}\}$ with running statistics estimated on a calibration buffer. The implemented reward can be viewed as
+\begin{equation}
+  R = w_{\mathrm{hard}} R_{\mathrm{hard}} +
+  w_{\mathrm{soft}}\hat{R}_{\mathrm{soft}} +
+  w_{\mathrm{data}}\hat{R}_{\mathrm{data}} +
+  w_{\mathrm{pref}}\hat{R}_{\mathrm{pref}}.
+\label{eq:scaledreward}
+\end{equation}
+This keeps the auxiliary terms numerically useful without weakening the dominance property in Equation \ref{eq:dominance}. A simple sanity check is to evaluate the 99th percentile of $|w_i\hat{R}_i|$ on a calibration batch; if an auxiliary term regularly exceeds the hard penalty for known violations, the config is unsafe even if training has not yet failed.
+
+\paragraph{Compute and deployment expectations:}
+The training guide supports three operating modes. The DPO mode is the cheapest because it consumes fixed triples and does not require online rollouts. PPO is the most expensive because it fits a value head and benefits from frequent reward evaluation. GRPO sits between them: it needs $K$ rollouts per prompt but removes the value head and often provides cleaner signal for short reasoning tasks. Prefix caching changes the practical economics by amortizing the system prompt and invariant task instructions across rollouts. If prefix-cache hit rate drops, the run should be profiled before the optimizer is blamed; the bottleneck may be prompt assembly, not the RL objective.
+
+\paragraph{Reproducibility checklist:}
+Every future result table should be accompanied by five artifacts: the exact reward config, the safe-range file, the preference-data version, the base/reference model hashes, and the evaluator JSON. Without those artifacts, a reported improvement is difficult to interpret because a lower violation rate could come from a stricter parser, a changed cap, a different trajectory domain, or a reward weight change. The repository's content-addressed checkpoints and manifest are designed to make this checklist easy rather than optional.
+
+\paragraph{Why this is not ordinary constrained RL:}
+Classical constrained MDP methods introduce constraints of the form $\mathbb{E}[C_i(\tau)]\le d_i$ and solve a Lagrangian relaxation. That framing is powerful when the learner controls a simulator and can estimate constraint costs under a policy. Pi-GRPO uses a stricter operational rule: a single hard-violating completion can be rejected or heavily penalized even if its expected cost would be acceptable under a batch average. This is closer to a safety filter than to an average-cost constraint. The reason is domain-specific. A trajectory audit or generated path is consumed as an individual artifact; a physically impossible artifact is not redeemed because other artifacts in the minibatch were feasible. The hard floor therefore acts at the sample level, while the auxiliary terms act at the distribution level.
+
+\paragraph{Variance reduction in GRPO:}
+The GRPO group baseline can be understood as a within-prompt control variate. If $R_k = q(x) + \epsilon_k$ where $q(x)$ is prompt difficulty and $\epsilon_k$ is rollout-specific quality, subtracting the group mean removes much of $q(x)$ and leaves the optimizer to compare completions for the same prompt. This is exactly the comparison the physics reward supports: among several completions for the same track, which one preserves the envelope and gives the best rationale? The weakness is that the baseline becomes noisy for small $K$ and uninformative when all completions are identical. For this reason the repository defaults to $K=8$, keeps temperature above zero during rollouts, and logs within-group standard deviation as a first-class metric.
+
+\paragraph{Parser uncertainty:}
+The reward assumes a parsed physical state sequence. Real model completions are messy: units may be omitted, times may be rounded, and rationales may contain multiple candidate verdicts. The parser therefore has to expose uncertainty rather than silently guessing. A future revision should attach a parse-confidence score and route low-confidence completions to one of three outcomes: retry with a structured-output prompt, mark the completion as invalid for reward computation, or send the sample to HITL. This detail is not cosmetic. A parser that ``helpfully'' repairs impossible units can hide the very violations the reward is meant to detect.
+
+\paragraph{Domain-transfer protocol:}
+The current defaults cover vessels, vehicles, and UAV-like motion, but every deployment should rerun calibration. The sequence is: choose domain caps, fit soft-envelope statistics on clean historical traces, run the two golden cases, add at least one domain-specific hard-violation case, evaluate the supervised base, then tune $w_{\text{hard}}$ until hard violations dominate but do not cause numerical instability. Only after that should preference training start. This ordering prevents a common mistake: tuning DPO or GRPO while the physical envelope itself is still moving. If the cap or parser changes after training, old checkpoints should be treated as stale because their reward history no longer corresponds to the deployed validator.
+
+\paragraph{Expected reviewer questions:}
+A reviewer will likely ask six hard questions. First, is the hard term just hand-written reward shaping? The answer is yes in implementation but no in purpose: it encodes a physical invariant, not a stylistic preference. Second, why use GRPO rather than PPO? Because the target reasoning tasks are short, sparse, and pairwise-comparable within a prompt, making a value head less attractive. Third, why keep PPO at all? Because online reward evaluation and value-based baselines remain useful for trajectory generation. Fourth, why trust HITL preferences? We do not trust them blindly; the physics term can override infeasible positives. Fifth, can the parser be attacked? Yes, which is why parser confidence and structured outputs are future priorities. Sixth, what result would be most convincing? A domain-scale run where hard-violation recall improves without lowering clean-track pass rate or collapsing diversity.
+
+\paragraph{Future benchmark layout:}
+The strongest future paper version should have two benchmark blocks. The first block is \emph{trajectory generation}: Porto, Harbin, and AIS splits with hard-violation rate, jerk/curvature p95 deviation, displacement error, and diversity. The second block is \emph{trajectory reasoning}: curated verdict prompts with clean, soft-violation, hard-violation, and ambiguous/HITL classes. Both blocks should include ablations over hard term, $\gamma_{\text{phys}}$, safe ranges, prefix caching, and GRPO group size. This layout will separate algorithmic contribution from systems contribution and will make it clear whether the gain comes from physics, optimizer choice, or rollout infrastructure.
+
+\paragraph{Current limitations and meaningful future work:}
+The current repository-grounded version has three limits that should stay visible. First, the repo has smoke/regression checks but not yet a domain-scale benchmark run. Second, the Pi-DPM data term depends on the quality and domain match of a frozen diffusion scorer. Third, the current reward is strongest for kinematic feasibility and weaker for semantic policy constraints such as maritime regulation text, right-of-way rules, or weather-dependent speed reductions. A natural future extension is to make these constraints compositional: keep S-KBM as the non-negotiable floor, add regulation-specific validators as typed reward terms, and expose each term separately in the evaluator. That direction would preserve the paper's central claim while broadening the meaning of ``physics-informed'' beyond one motion model.
+
 % ============================================================
 \section{Discussion and Limitations}
 \label{sec:disc}
@@ -401,7 +684,22 @@ DPO + $\gamma_{\text{phys}}=0.20$ & 0.51  & 0.00  & 0.9 \\
 The hard reward floor is the structural defense against reward hacking but cannot replace human review of reward configurations. Three caveats. First, $\kappa_{\max}$ is derived from $\delta_{\max}$ and $L$; both are domain-specific and require reasonable defaults (we ship vessel/vehicle/UAV defaults). Second, $R_{\text{data}}$ depends on a Pi-DPM checkpoint trained on a specific corpus; cross-domain transfer requires retraining. Third, GRPO's group baseline is variance-reduction that depends on within-group diversity; for prompts with degenerate completions the group collapses and the advantage is uninformative; we mitigate by sampling with $T=0.7, p=0.95$.
 
 \smallskip
-\textbf{Connection to agentic reasoning.} Pi-GRPO consumes preference data emitted by the sibling agentic system GeoTrace-Agent (companion preprint). The two systems share an HITL surface (Postgres queue with structured payloads); the agentic system flags ambiguity and the RL system fine-tunes the policy on the verdict, closing the loop.
+\textbf{Connection to agentic reasoning:} Pi-GRPO consumes preference data emitted by the sibling agentic system GeoTrace-Agent (companion preprint). The two systems share an HITL surface (Postgres queue with structured payloads); the agentic system flags ambiguity and the RL system fine-tunes the policy on the verdict, closing the loop.
+
+\paragraph{Practical limitations:}
+The most important limitation is that the hard floor is only as correct as the physical envelope. For vessels, a single speed cap is a simplified proxy for a richer operational regime involving vessel class, sea state, traffic separation schemes, local regulations, and sensor noise. For vehicles, a kinematic bicycle model is reasonable at moderate speeds but ignores tire forces, road grade, and traffic law. For UAVs, wind and battery constraints can dominate simple speed/curvature limits. Pi-GRPO should therefore be read as a framework for promoting verified domain constraints into the reward, not as a claim that one S-KBM envelope exhausts physical reality.
+
+\paragraph{Model-output limitations:}
+The system also assumes that the completion contains enough structure to recover a physical payload. This is easy for a trajectory decoder and harder for a general LLM rationale. Structured outputs can mitigate the issue, but they introduce their own failure mode: a model can satisfy the schema while giving a weak or incomplete rationale. For this reason the final evaluator should score both payload correctness and rationale consistency. A verdict-only model may be adequate for automation, but a portfolio paper benefits from showing that the model can explain why a violation occurred in physically meaningful terms.
+
+\paragraph{Data limitations:}
+Preference data collected through HITL is valuable because it reflects ambiguous operational cases, but it is also biased toward examples the agent was uncertain about. A model trained only on HITL corrections may overfit borderline traces and underperform on routine clean paths. Synthetic preference generation by rollout-and-rank helps cold start, yet synthetic pairs can exaggerate the reward's current blind spots. The intended data mix is therefore three-way: clean historical traces for calibration, HITL corrections for ambiguity, and synthetic physics-contrast pairs for hard-negative coverage. A future empirical section should report results for each data source separately.
+
+\paragraph{Future work:}
+The next technical step is a domain-scale run with two evaluation heads. The first head should be a trajectory-generation benchmark where the policy is compared with supervised decoding, Pi-DPM, and diffusion baselines on feasibility, displacement error, likelihood, and diversity. The second should be a reasoning benchmark where the policy is compared with a base LLM, vanilla DPO, Physics-DPO, PPO, and GRPO on hard-violation recall, false positives, contradiction rate, and HITL routing. This would turn the current paper from a repository-grounded methods paper into a full experimental paper.
+
+\paragraph{Broader impact and safety:}
+Physics-informed alignment can reduce one class of operational error, but it can also make automated trajectory judgments appear more authoritative than the evidence supports. The system should therefore expose uncertainty and route low-confidence cases to review. The correct deployment posture is not ``the model decides'' but ``the model proposes under hard physical guards, and ambiguous cases remain auditable.'' That posture matches the architecture: hard constraints are deterministic, preferences are learned, and human review remains part of the loop.
 
 % ============================================================
 \section{Conclusion}
@@ -422,6 +720,12 @@ Y. Bai et al. Constitutional AI: Harmlessness from AI feedback. \emph{arXiv:2212
 \bibitem[Casper et al., 2023]{casper2023open}
 S. Casper et al. Open problems and fundamental limitations of reinforcement learning from human feedback. \emph{TMLR}, 2023.
 
+\bibitem[Achiam et al., 2017]{achiam2017cpo}
+J. Achiam, D. Held, A. Tamar, and P. Abbeel. Constrained policy optimization. \emph{ICML}, 2017.
+
+\bibitem[Altman, 1999]{altman1999constrained}
+E. Altman. \emph{Constrained Markov Decision Processes}. Chapman and Hall/CRC, 1999.
+
 \bibitem[Centific, 2025a]{centific2025legalwiz}
 A. Mantravadi, S. Dalmia, A. Mukherji, N. Dave, A. Mittal, and O. Pospelova. LegalWiz: A multi-agent generation framework for contradiction detection in legal documents. \emph{NeurIPS 2025 Workshop on Generative and Protective AI for Content Creation}, 2025.
 
@@ -434,11 +738,26 @@ A. Mantravadi, S. Dalmia, A. Mukherji. ART: Action-based reasoning task benchmar
 \bibitem[DeepSeek, 2025]{deepseek2025r1}
 DeepSeek-AI. DeepSeek-R1: Incentivizing reasoning capability in LLMs via reinforcement learning. \emph{arXiv:2501.12948}, 2025.
 
+\bibitem[Dettmers et al., 2023]{dettmers2023qlora}
+T. Dettmers, A. Pagnoni, A. Holtzman, and L. Zettlemoyer. QLoRA: Efficient finetuning of quantized LLMs. \emph{NeurIPS}, 2023.
+
 \bibitem[Eisenstein et al., 2023]{eisenstein2023helping}
 J. Eisenstein et al. Helping or herding? Reward model ensembles mitigate but do not eliminate reward hacking. \emph{arXiv:2312.09244}, 2023.
 
 \bibitem[Ghosh and Sharma et al., 2024]{ghosh2024kriging}
 S. Ghosh, A. Sharma, J. Gupta, A. Subramanian, and S. Shekhar. Towards Kriging-informed conditional diffusion for regional sea-level data downscaling. \emph{ACM SIGSPATIAL}, 2024.
+
+\bibitem[Ho et al., 2020]{ho2020ddpm}
+J. Ho, A. Jain, and P. Abbeel. Denoising diffusion probabilistic models. \emph{NeurIPS}, 2020.
+
+\bibitem[Ho and Ermon, 2016]{ho2016gail}
+J. Ho and S. Ermon. Generative adversarial imitation learning. \emph{NeurIPS}, 2016.
+
+\bibitem[Hu et al., 2022]{hu2022lora}
+E. J. Hu et al. LoRA: Low-rank adaptation of large language models. \emph{ICLR}, 2022.
+
+\bibitem[Jiang et al., 2023]{jiang2023mistral}
+A. Q. Jiang et al. Mistral 7B. \emph{arXiv:2310.06825}, 2023.
 
 \bibitem[Karpatne et al., 2017]{karpatne2017kgml}
 A. Karpatne et al. Theory-guided data science: A new paradigm for scientific discovery from data. \emph{IEEE TKDE}, 29(10):2318--2331, 2017.
@@ -455,6 +774,9 @@ W. Kwon et al. Efficient memory management for large language model serving with
 \bibitem[Lee et al., 2024]{lee2024rlaif}
 H. Lee et al. RLAIF: Scaling reinforcement learning from human feedback with AI feedback. \emph{ICML}, 2024.
 
+\bibitem[Ng et al., 1999]{ng1999policy}
+A. Y. Ng, D. Harada, and S. Russell. Policy invariance under reward transformations: Theory and application to reward shaping. \emph{ICML}, 1999.
+
 \bibitem[Ouyang et al., 2022]{ouyang2022training}
 L. Ouyang et al. Training language models to follow instructions with human feedback. \emph{NeurIPS}, 2022.
 
@@ -466,6 +788,9 @@ R. Rafailov, A. Sharma, E. Mitchell, S. Ermon, C. D. Manning, and C. Finn. Direc
 
 \bibitem[Raissi et al., 2019]{raissi2019pinn}
 M. Raissi, P. Perdikaris, and G. E. Karniadakis. Physics-informed neural networks. \emph{Journal of Computational Physics}, 378:686--707, 2019.
+
+\bibitem[Ross et al., 2011]{ross2011dagger}
+S. Ross, G. Gordon, and D. Bagnell. A reduction of imitation learning and structured prediction to no-regret online learning. \emph{AISTATS}, 2011.
 
 \bibitem[Schulman et al., 2017]{schulman2017ppo}
 J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov. Proximal Policy Optimization algorithms. \emph{arXiv:1707.06347}, 2017.
@@ -479,8 +804,23 @@ A. Sharma, M. Yang, M. Farhadloo, S. Ghosh, B. Jayaprakash, and S. Shekhar. Towa
 \bibitem[Skalse et al., 2022]{skalse2022defining}
 J. Skalse et al. Defining and characterizing reward hacking. \emph{NeurIPS}, 2022.
 
+\bibitem[Song et al., 2021]{song2021score}
+Y. Song, J. Sohl-Dickstein, D. Kingma, A. Kumar, S. Ermon, and B. Poole. Score-based generative modeling through stochastic differential equations. \emph{ICLR}, 2021.
+
 \bibitem[Stiennon et al., 2020]{stiennon2020learning}
 N. Stiennon et al. Learning to summarize from human feedback. \emph{NeurIPS}, 2020.
+
+\bibitem[Sutton and Barto, 2018]{sutton1998rl}
+R. S. Sutton and A. G. Barto. \emph{Reinforcement Learning: An Introduction}. MIT Press, 2nd edition, 2018.
+
+\bibitem[Touvron et al., 2023]{touvron2023llama}
+H. Touvron et al. Llama 2: Open foundation and fine-tuned chat models. \emph{arXiv:2307.09288}, 2023.
+
+\bibitem[Wiewiora, 2003]{potentialbased2003}
+E. Wiewiora. Potential-based shaping and Q-value initialization are equivalent. \emph{Journal of Artificial Intelligence Research}, 19:205--208, 2003.
+
+\bibitem[Williams, 1992]{williams1992simple}
+R. J. Williams. Simple statistical gradient-following algorithms for connectionist reinforcement learning. \emph{Machine Learning}, 8:229--256, 1992.
 
 \bibitem[Yang et al., 2025]{yang2025gcdm}
 M. Yang, A. Sharma, M. Farhadloo, B. Jayaprakash, and S. Shekhar. Geo-lucid conditional diffusion models for high physical fidelity trajectory generation. \emph{ACM SIGSPATIAL}, 2025.
