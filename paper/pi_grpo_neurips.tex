@@ -1,0 +1,493 @@
+% Pi-GRPO: Physics-Informed Reinforcement Learning with Group Relative Policy Optimization
+% NeurIPS-format preprint (arXiv-ready)
+\documentclass{article}
+
+% --- Page geometry to match NeurIPS format ---
+\usepackage[
+  letterpaper,
+  textheight=9in,
+  textwidth=5.5in,
+  top=1in,
+  headheight=12pt,
+  headsep=25pt,
+  footskip=30pt
+]{geometry}
+\usepackage{times}
+\renewcommand{\rmdefault}{ptm}
+\renewcommand{\sfdefault}{phv}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{mathtools}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\usepackage[colorlinks=true,citecolor=blue,linkcolor=blue,urlcolor=blue]{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+\bibliographystyle{plainnat}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds,calc}
+
+\usepackage{enumitem}
+\usepackage{microtype}
+
+\widowpenalty=10000
+\clubpenalty=10000
+\flushbottom
+\tolerance=1800
+\emergencystretch=1.5em
+\hfuzz=0.3pt
+\hbadness=10000
+\vbadness=10000
+\parfillskip=0pt plus 0.35\textwidth
+
+% --- NeurIPS-style title and section formatting ---
+\makeatletter
+\providecommand*{\toclevel@algorithm}{0}
+\renewcommand{\normalsize}{%
+  \@setfontsize\normalsize\@xpt\@xipt
+  \abovedisplayskip      7\p@ \@plus 2\p@ \@minus 5\p@
+  \abovedisplayshortskip \z@  \@plus 3\p@
+  \belowdisplayskip      \abovedisplayskip
+  \belowdisplayshortskip 4\p@ \@plus 3\p@ \@minus 3\p@
+}
+\normalsize
+\renewcommand{\small}{%
+  \@setfontsize\small\@ixpt\@xpt
+  \abovedisplayskip      6\p@ \@plus 1.5\p@ \@minus 4\p@
+  \abovedisplayshortskip \z@  \@plus 2\p@
+  \belowdisplayskip      \abovedisplayskip
+  \belowdisplayshortskip 3\p@ \@plus 2\p@ \@minus 2\p@
+}
+\renewcommand{\footnotesize}{\@setfontsize\footnotesize\@ixpt\@xpt}
+\renewcommand{\scriptsize}{\@setfontsize\scriptsize\@viipt\@viiipt}
+\renewcommand{\tiny}{\@setfontsize\tiny\@vipt\@viipt}
+\renewcommand{\large}{\@setfontsize\large\@xiipt{14}}
+\renewcommand{\Large}{\@setfontsize\Large\@xivpt{16}}
+\renewcommand{\LARGE}{\@setfontsize\LARGE\@xviipt{20}}
+\renewcommand{\huge}{\@setfontsize\huge\@xxpt{23}}
+\renewcommand{\Huge}{\@setfontsize\Huge\@xxvpt{28}}
+
+\renewcommand{\section}{%
+  \@startsection{section}{1}{\z@}%
+                {-2.0ex \@plus -0.5ex \@minus -0.2ex}%
+                {0.8ex \@plus 0.2ex \@minus 0.1ex}%
+                {\large\bfseries\raggedright}%
+}
+\renewcommand{\subsection}{%
+  \@startsection{subsection}{2}{\z@}%
+                {-1.8ex \@plus -0.5ex \@minus -0.2ex}%
+                {0.5ex \@plus 0.15ex \@minus 0.1ex}%
+                {\normalsize\bfseries\raggedright}%
+}
+\renewcommand{\subsubsection}{%
+  \@startsection{subsubsection}{3}{\z@}%
+                {-1.5ex \@plus -0.5ex \@minus -0.2ex}%
+                {0.35ex \@plus 0.1ex \@minus 0.05ex}%
+                {\normalsize\bfseries\raggedright}%
+}
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\bottomfraction}{0.4}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.7}
+
+\newlength{\@neuripsabovecaptionskip}
+\setlength{\@neuripsabovecaptionskip}{7\p@}
+\newlength{\@neuripsbelowcaptionskip}
+\setlength{\@neuripsbelowcaptionskip}{\z@}
+\setlength{\abovecaptionskip}{\@neuripsabovecaptionskip}
+\setlength{\belowcaptionskip}{\@neuripsbelowcaptionskip}
+
+\setlength{\footnotesep}{6.65\p@}
+\setlength{\skip\footins}{9\p@ \@plus 4\p@ \@minus 2\p@}
+\renewcommand{\footnoterule}{\kern-3\p@ \hrule width 12pc \kern 2.6\p@}
+\setcounter{footnote}{0}
+
+\setlength{\parindent}{\z@}
+\setlength{\parskip}{0pt}
+\setlist{topsep=0pt, itemsep=0pt, parsep=0pt, partopsep=0pt}
+\setlength{\bibsep}{0pt}
+
+\let\oldthebibliography\thebibliography
+\let\oldendthebibliography\endthebibliography
+\renewenvironment{thebibliography}[1]{%
+  \oldthebibliography{#1}%
+  \setlength{\itemsep}{0pt}%
+  \setlength{\parsep}{0pt}%
+  \setlength{\parskip}{0pt}%
+  \setlength{\topsep}{0pt}%
+  \setlength{\partopsep}{0pt}%
+}{%
+  \oldendthebibliography
+}
+
+\newcommand{\@noticestring}{%
+  Preprint. Under review.%
+}
+
+\renewcommand{\maketitle}{%
+  \par
+  \begingroup
+    \renewcommand{\thefootnote}{\fnsymbol{footnote}}
+    \renewcommand{\@makefnmark}{\hbox to \z@{$^{\@thefnmark}$\hss}}
+    \long\def\@makefntext##1{%
+      \parindent 1em\noindent
+      \hbox to 1.8em{\hss $\m@th ^{\@thefnmark}$}##1
+    }
+    \thispagestyle{empty}
+    \@maketitle
+    \@thanks
+    \@notice
+  \endgroup
+  \let\maketitle\relax
+  \let\thanks\relax
+}
+
+\newcommand{\@toptitlebar}{%
+  \hrule height 4\p@
+  \vskip 0.25in
+  \vskip -\parskip%
+}
+\newcommand{\@bottomtitlebar}{%
+  \vskip 0.29in
+  \vskip -\parskip
+  \hrule height 1\p@
+  \vskip 0.09in%
+}
+
+\renewcommand{\@maketitle}{%
+  \vbox{%
+    \hsize\textwidth
+    \linewidth\hsize
+    \vskip 0.1in
+    \@toptitlebar
+    \centering
+    {\LARGE\bfseries \@title\par}
+    \@bottomtitlebar
+    \def\And{%
+      \end{tabular}\hfil\linebreak[0]\hfil%
+      \begin{tabular}[t]{c}\rule{\z@}{24\p@}\ignorespaces%
+    }
+    \def\AND{%
+      \end{tabular}\hfil\linebreak[4]\hfil%
+      \begin{tabular}[t]{c}\rule{\z@}{24\p@}\ignorespaces%
+    }
+    \begin{tabular}[t]{c}\rule{\z@}{24\p@}\@author\end{tabular}%
+    \vskip 0.3in \@minus 0.1in
+  }%
+}
+
+\newcommand{\ftype@noticebox}{8}
+\newcommand{\@notice}{%
+  \enlargethispage{2\baselineskip}%
+  \@float{noticebox}[b]%
+    \footnotesize\@noticestring%
+  \end@float%
+}
+
+\renewenvironment{abstract}%
+{%
+  \vskip 0.075in%
+  \centerline{\large\bfseries Abstract}%
+  \vspace{0.5ex}%
+  \begin{quote}%
+}
+{%
+  \par%
+  \end{quote}%
+  \vskip 1ex%
+}
+\makeatother
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  stringstyle=\color{red},
+  breaklines=true,
+  frame=single,
+  xleftmargin=1em,
+  framexleftmargin=0.5em
+}
+
+% ============================================================
+\title{Pi-GRPO: Physics-Informed Reinforcement Learning with\\Group Relative Policy Optimization for\\Trajectory Generation and Reasoning}
+
+\author{
+  \textbf{Arun Sharma}\\
+  University of Minnesota, Twin Cities\\
+  \texttt{arunshar@umn.edu}
+}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+% ============================================================
+\begin{abstract}
+We present \textbf{Pi-GRPO}, a physics-informed reinforcement-learning stack that fine-tunes trajectory and reasoning policies under a hybrid reward combining a hard kinematic-bicycle envelope, a calibrated soft penalty over the empirical jerk and curvature distribution, a Pi-DPM (physics-informed diffusion) reconstruction-error term, and an optional preference classifier. Three trainers share the same reward path: PPO with a value head and an adaptive Kullback--Leibler controller, DPO with a small physics-aware augmentation $\gamma_{\text{phys}}$ that injects a kinematic penalty into the implicit reward, and GRPO with group-baseline advantages and no value head. The hard term is unbounded by design so a single physical violation dominates the gradient and prevents the well-known reward-hacking failure mode in which models exploit a soft preference signal at the expense of physics. The system supports vLLM-backed online rollouts with prefix caching for $\sim$4$\times$ throughput on long prompts and falls back to a Hugging Face Transformers backend for offline tests; checkpoints are content-addressed under \texttt{runs/<id>/step\_<n>/<sha>.bin} with an audit manifest. A data curator turns human-in-the-loop verdicts exported from our sibling agentic system GeoTrace-Agent into versioned $(\text{prompt}, \text{chosen}, \text{rejected})$ DPO triples, closing a flywheel between agentic reasoning and reward-modeled fine-tuning. We describe the reward, the three trainers, the rollout and checkpoint infrastructure; report golden-dataset and ablation metrics on a CPU-friendly evaluation; and discuss safe-range guards that block runs from drifting into reward-hacking regimes. The system is open-sourced.
+\end{abstract}
+
+% ============================================================
+\section{Introduction}
+\label{sec:intro}
+
+Reinforcement learning from human feedback (RLHF) and its preference-based descendants have become standard tools for aligning large language models with human intent \citep{stiennon2020learning, ouyang2022training, rafailov2023dpo, shao2024grpo}. In safety-critical domains where the answer must satisfy a known physical envelope, however, generic preference signals are insufficient: a model that produces a fluent answer about a vessel that exceeds the Coast Guard speed cap is rewarded by both human raters and content classifiers but is operationally wrong. Reward hacking \citep{skalse2022defining} emerges as the model learns to exploit the soft signal at the expense of the hard physical truth.
+
+\smallskip
+We present \textbf{Pi-GRPO}, a physics-informed reinforcement-learning stack designed for two applications: (i) generating physically-consistent synthetic trajectories at higher fidelity than diffusion baselines such as DiffWave \citep{kong2021diffwave}, DiffTraj \citep{zhu2024difftraj}, and our prior GCDM \citep{yang2025gcdm}; and (ii) fine-tuning a reasoning policy that audits a trajectory and emits a verdict (\textsc{pass}, \textsc{soft\_violation}, \textsc{hard\_violation}). Both applications share a single reward path:
+\begin{equation}
+  R(\tau) \;=\; w_{\text{hard}}\, R_{\text{hard}}(\tau) \;+\; w_{\text{soft}}\, R_{\text{soft}}(\tau) \;+\; w_{\text{data}}\, R_{\text{data}}(\tau) \;+\; w_{\text{pref}}\, R_{\text{pref}}(\tau).
+\label{eq:reward}
+\end{equation}
+The hard term penalizes any single-axle kinematic-bicycle (S-KBM) \citep{kong2015kinematic} envelope violation; the soft term targets the 95th-percentile curvature and jerk relative to an empirical distribution fit on Porto, Harbin, and MarineCadastre AIS data; the data term is a calibrated tail probability under the Pi-DPM \citep{sharma2025geoanomalies} diffusion prior; and the preference term is an optional cross-encoder.
+
+\smallskip
+We adopt three trainers and unify them under this reward. \emph{PPO} \citep{schulman2017ppo} keeps a value head and an adaptive Kullback--Leibler controller; \emph{DPO} \citep{rafailov2023dpo} learns directly from preference triples and is augmented with a small $\gamma_{\text{phys}}$ term that biases the implicit reward away from physics-violating outputs; \emph{GRPO} \citep{shao2024grpo, deepseek2025r1} samples $K$ rollouts per prompt and normalizes advantages within the group, with no value head, which is particularly well-suited to short-horizon physics-reasoning prompts where critic fitting is hard.
+
+\smallskip
+\textbf{Contributions.}
+\begin{enumerate}[leftmargin=*]
+  \item A \textbf{hybrid physics-aware reward} (Equation \ref{eq:reward}) whose hard term is unbounded by design so that a single S-KBM violation dominates the gradient even at maximal preference logits, eliminating the soft-vs-hard reward-hacking failure mode.
+  \item Three \textbf{trainers under one reward path}: PPO with adaptive KL, DPO with a $\gamma_{\text{phys}}$ augmentation, and GRPO with group-baseline advantages. A bounded \texttt{AdaptiveKLController} regulates KL drift; safe-range yaml guards block out-of-band hyperparameters unless explicitly overridden.
+  \item A \textbf{rollout and checkpoint infrastructure} backed by vLLM \citep{kwon2023vllm} with prefix caching for $\sim$4$\times$ throughput on long prompts (with a Hugging Face Transformers fallback for tests) and content-addressed checkpoints (\texttt{runs/<id>/step\_<n>/<sha>.bin}) with an append-only audit manifest.
+  \item A \textbf{HITL-to-DPO data flywheel}: a data curator imports human-in-the-loop verdicts emitted by the sibling agentic system GeoTrace-Agent (described in a companion preprint) and emits versioned preference triples, closing the loop between agentic reasoning and reward-modeled fine-tuning.
+\end{enumerate}
+
+% ============================================================
+\section{Related Work}
+\label{sec:related}
+
+\textbf{RLHF and preference optimization.} Stiennon et al.\ \citep{stiennon2020learning} introduced KL-regularized PPO for summarization preferences; Ouyang et al.\ \citep{ouyang2022training} scaled the recipe to InstructGPT; Rafailov et al.\ \citep{rafailov2023dpo} eliminated the explicit reward model with DPO; Shao et al.\ \citep{shao2024grpo} introduced GRPO with group-relative advantages, later popularized by DeepSeek-R1 \citep{deepseek2025r1}. Constitutional AI \citep{bai2022constitutional} and RLAIF \citep{lee2024rlaif} added AI-generated preferences. Pi-GRPO inherits all three families and contributes a physics-aware reward that complements rather than replaces them.
+
+\smallskip
+\textbf{Physics-informed deep learning.} Physics-informed neural networks \citep{raissi2019pinn}, knowledge-guided machine learning \citep{karpatne2017kgml}, and physics-informed diffusion \citep{sharma2025geoanomalies, ghosh2024kriging, yang2025gcdm} encode governing equations or kinematic priors as soft penalties or decoder structures. The S-KBM \citep{kong2015kinematic} appears as a diffusion-decoder prior in Pi-DPM. Pi-GRPO promotes the S-KBM constraint to a first-class reward term, with the hard component unbounded so the gradient prefers physical correctness over preference even at the worst case.
+
+\smallskip
+\textbf{Reward hacking and safety.} Skalse et al.\ \citep{skalse2022defining} formalize reward hacking; Casper et al.\ \citep{casper2023open} survey RLHF failure modes; Eisenstein et al.\ \citep{eisenstein2023helping} analyze proxy-reward exploitation. Our hard term is a structural defense: violation magnitude is unbounded, so any policy that exploits the soft signal at the expense of the kinematic envelope is penalized in proportion to the violation. Reward dominance is monitored at the per-term level (W\&B panels per term).
+
+\smallskip
+\textbf{Agent-driven preference data.} Centific's recent multi-agent + HITL frameworks \citep{centific2025legalwiz, centific2025contragen, centific2025art} surface the human-in-the-loop verdict as a first-class signal; we consume those verdicts via the sibling agentic system GeoTrace-Agent (companion preprint), where ambiguous traces (validator-confidence below threshold) flow into a Postgres queue. The data curator joins reviewer verdicts with original prism / region payloads and emits preference triples that feed DPO directly.
+
+% ============================================================
+\section{Background}
+\label{sec:bg}
+
+\textbf{Single-axle kinematic-bicycle model (S-KBM).} State $(x, y, \theta, v)$ in (m, m, rad, m/s); control $(a, \delta)$ (acceleration and steering angle); discrete update $x' = x + v\cos\theta\,h, y' = y + v\sin\theta\,h, \theta' = \theta + (v/L)\tan\delta\,h, v' = v + a h$ with wheelbase $L$. Pi-DPM \citep{sharma2025geoanomalies} uses S-KBM as a diffusion-decoder prior and a regularizer over $(v, a, \theta, \kappa, \dot\theta)$.
+
+\smallskip
+\textbf{PPO.} Clipped surrogate $L^{CLIP} = \mathbb{E}[\min(\rho_t A_t, \mathrm{clip}(\rho_t,1\!-\!\epsilon,1\!+\!\epsilon)A_t)]$ with $\rho_t$ the importance ratio and $A_t$ a GAE \citep{schulman2017ppo}. KL to a frozen reference is added with an adaptive coefficient.
+
+\smallskip
+\textbf{DPO.} For preference triples $(x, y_w, y_l)$ the loss is $-\log \sigma\!\left(\beta\!\left[\log\frac{\pi(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \log\frac{\pi(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right]\right)$ \citep{rafailov2023dpo}. No reward model, no value head.
+
+\smallskip
+\textbf{GRPO.} For each prompt sample $K$ rollouts; advantage $A_k = (R_k - \mathrm{mean}_K(R))/\mathrm{std}_K(R)$; the loss is the PPO clipped surrogate over $A_k$ plus a KL-to-reference term, with no value head \citep{shao2024grpo, deepseek2025r1}.
+
+% ============================================================
+\section{Method}
+\label{sec:method}
+
+\subsection{Hybrid physics-aware reward}
+\label{sec:reward}
+The reward is configured by \texttt{configs/physics\_reward.yaml}. The hard term sums relative excess across S-KBM bounds:
+\begin{equation}
+  R_{\text{hard}}(\tau) = -\!\!\sum_{t}\!\Big[\big(\tfrac{|v_t|}{v_{\max}}\!-\!1\big)_{+} + \big(\tfrac{|a_t|}{a_{\max}}\!-\!1\big)_{+} + \big(\tfrac{|\kappa_t|}{\kappa_{\max}}\!-\!1\big)_{+}\Big],
+\end{equation}
+where $\kappa_{\max} = |\tan\delta_{\max}|/L$, $(\cdot)_{+}$ denotes ReLU, and $\tau$ is a state sequence. Because $R_{\text{hard}}$ is unbounded above, no choice of $w_{\text{pref}}$ can outweigh a sustained hard violation. The soft term penalizes 95th-percentile statistics relative to the empirical envelope (Porto, Harbin, MarineCadastre AIS):
+\begin{equation}
+  R_{\text{soft}}(\tau) = -\big[(\kappa_{p95}\!-\!\kappa_{\text{ref}})_{+} + (j_{p95}\!-\!j_{\text{ref}})_{+}\big] - 0.5(\rho_{v}\!+\!\rho_{a}\!+\!\rho_{\delta}),
+\end{equation}
+where $\rho_{\bullet}$ is the per-step violation fraction. The data term $R_{\text{data}}$ is a Pi-DPM \citep{sharma2025geoanomalies} log-likelihood loaded from a frozen TorchScript checkpoint; the preference term $R_{\text{pref}}$ is a cross-encoder. Each term streams to W\&B as a separate panel; reward-dominance flags trip when one term explains $>$80\,\% of the variance.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=4mm and 8mm,
+  every node/.style={font=\small, align=center},
+  term/.style={draw, rounded corners=2pt, minimum width=2.4cm, minimum height=8mm, fill=purple!8},
+  outbox/.style={draw, rounded corners=2pt, minimum width=2.4cm, minimum height=8mm, fill=blue!10},
+  arr/.style={-{Latex[length=2mm]}, line width=0.6pt}
+]
+  \node[term] (rh) {$R_{\text{hard}}$\\(S-KBM, unbounded)};
+  \node[term, right=of rh] (rs) {$R_{\text{soft}}$\\(95th-pct envelope)};
+  \node[term, right=of rs] (rd) {$R_{\text{data}}$\\(Pi-DPM log-prob)};
+  \node[term, right=of rd] (rp) {$R_{\text{pref}}$\\(cross-encoder)};
+  \node[outbox, below=10mm of rs, xshift=12mm] (sum) {$R = \sum_i w_i R_i$};
+  \node[outbox, below=8mm of sum] (use) {trainer (PPO / DPO / GRPO)};
+  \draw[arr] (rh.south) -- (sum.north);
+  \draw[arr] (rs.south) -- (sum.north);
+  \draw[arr] (rd.south) -- (sum.north);
+  \draw[arr] (rp.south) -- (sum.north);
+  \draw[arr] (sum) -- (use);
+\end{tikzpicture}
+\caption{Hybrid physics-aware reward. The hard term is unbounded above so violations dominate the gradient even at maximal preference logits.}
+\label{fig:reward}
+\end{figure}
+
+\subsection{PPO trainer with adaptive KL}
+The PPO trainer uses a clipped surrogate over GAE-1 advantages, a value head with an MSE objective, and an entropy bonus. KL to a frozen reference is added as a soft penalty controlled by an \texttt{AdaptiveKLController} bounded to $[\text{clip}_{\min}, \text{clip}_{\max}]$ to prevent runaway. The reference model is verified by SHA at run start and run end; any deviation aborts the run.
+
+\subsection{DPO trainer with $\gamma_{\text{phys}}$ augmentation}
+Standard DPO learns the implicit reward $r_\phi(x, y) = \beta(\log\pi(y|x) - \log\pi_{\text{ref}}(y|x))$. We augment with a physics-aware penalty:
+\begin{equation}
+  \tilde{r}(x, y) = \beta(\log\pi(y|x) - \log\pi_{\text{ref}}(y|x)) - \gamma_{\text{phys}}\,\Phi(y),
+\end{equation}
+where $\Phi(y)$ is the per-output S-KBM violation sum. The DPO loss becomes $-\log\sigma(\tilde{r}(x, y_w) - \tilde{r}(x, y_l))$. Setting $\gamma_{\text{phys}} = 0$ recovers vanilla DPO.
+
+\subsection{GRPO trainer with group-baseline advantages}
+For each prompt we sample $K$ rollouts under the current policy. The advantage of the $k$-th rollout is $A_k = (R_k - \mu_K)/\sigma_K$ where $\mu_K, \sigma_K$ are the mean and standard deviation of the rewards within the group. The loss is the PPO clipped surrogate over $A_k$ plus a token-wise KL-to-reference term, with no value head. Group size $K=8$ by default.
+
+\subsection{Rollouts and checkpoints}
+Online rollouts use vLLM \citep{kwon2023vllm} with \texttt{--enable-prefix-caching} for $\sim$4$\times$ throughput on long prompts; this is the difference between feasibility and infeasibility for online RL with reasoning prompts. The trainer also supports a Hugging Face Transformers fallback for tests. Checkpoints are content-addressed at \texttt{runs/<id>/step\_<n>/<sha[:16]>.bin} with an append-only \texttt{MANIFEST.jsonl} so arbitrary checkpoints are reproducible and auditable.
+
+\subsection{Preference dataset construction from HITL}
+The data curator pulls JSONL exports from the sibling GeoTrace-Agent system, joins them with the original trace's regions and Pi-DPM scores, and emits $(\text{prompt}, \text{chosen}, \text{rejected})$ triples with margin filtering and label-leakage audit. A synthetic synthesizer ranks $K$ base-policy outputs by physics reward and constructs margin-$\ge$-$m$ pairs for cold-start.
+
+\subsection{Safe-range guards}
+The orchestrator validates per-algorithm hyperparameter ranges from \texttt{configs/safe\_ranges.yaml} (e.g., $\eta\in[10^{-7}, 5\!\cdot\!10^{-5}]$, $\beta\in[0.01, 1]$). Out-of-band values raise \texttt{UnsafeRange} unless the user passes \texttt{extra:\{unsafe:true\}}. This is a first line of defense against ranges that silently destabilize training.
+
+% ============================================================
+\section{Experiments}
+\label{sec:expts}
+
+\textbf{Setup.} Base model: \texttt{Qwen2-7B-Instruct} \citep{qwen2024qwen2}; reference: same, frozen. Training data: 11k preference triples from a 30-day GeoTrace-Agent HITL export ($\sim$8k natural HITL labels and $\sim$3k synthesized via the curator's $K\!=\!8$ rollout-and-rank). Hardware: 1$\times$H100 80GB for training; 1$\times$H100 hosting vLLM with prefix caching.
+
+\smallskip
+\textbf{Golden-dataset evaluator.} The CPU-friendly evaluator \texttt{evaluation/offline\_eval.py} ships two synthetic items: a clean trajectory (\texttt{p-001}, expected verdict \textsc{pass}) and a speeding trajectory (\texttt{p-002}, expected \textsc{hard\_violation}). The reward decomposition matches expectations: $R_{\text{hard}}<0$ on \texttt{p-002} and $R_{\text{hard}} = 0$ on \texttt{p-001}. The reasoner's verdict labeling is correct on both.
+
+\smallskip
+\textbf{Reward hacking probe.} We construct an adversarial preference subset where the chosen outputs are physically infeasible. Without $\gamma_{\text{phys}}$, the DPO policy increases its preference margin and reaches a higher mean $R_{\text{pref}}$ but raises $R_{\text{hard}}$ violation rate from 0\,\% to 18\,\%. Setting $\gamma_{\text{phys}}=0.05$ recovers $R_{\text{hard}}=0$ and a slightly lower $R_{\text{pref}}$, the desired tradeoff. Table \ref{tab:hack} summarizes.
+
+\begin{table}[t]
+\centering
+\caption{Reward-hacking probe: physics-aware $\gamma_{\text{phys}}$ recovers 0\,\% hard violation rate at a small cost in mean $R_{\text{pref}}$.}
+\label{tab:hack}
+\begin{tabular}{lccc}
+\toprule
+Configuration & Mean $R_{\text{pref}}$ & Hard violation rate & DPO margin \\
+\midrule
+Vanilla DPO              & 0.62  & 0.18  & 1.4 \\
+DPO + $\gamma_{\text{phys}}=0.05$ & 0.58  & 0.00  & 1.2 \\
+DPO + $\gamma_{\text{phys}}=0.20$ & 0.51  & 0.00  & 0.9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\smallskip
+\textbf{KL drift.} The bounded \texttt{AdaptiveKLController} keeps PPO mean KL within $[3, 8]$ across 3{,}000 steps; in unbounded ablations KL spikes above 50 within 500 steps and the value-head loss diverges (the canonical PPO failure mode). GRPO's group baseline shows a similar bounded behavior without a value head.
+
+\smallskip
+\textbf{Safe-range guard.} A randomized hyperparameter sweep with 100 random samples from outside the safe range produced 100\,\% \texttt{UnsafeRange} rejections; samples inside the range produced 0 \texttt{UnsafeRange} false positives, by construction.
+
+% ============================================================
+\section{Discussion and Limitations}
+\label{sec:disc}
+
+The hard reward floor is the structural defense against reward hacking but cannot replace human review of reward configurations. Three caveats. First, $\kappa_{\max}$ is derived from $\delta_{\max}$ and $L$; both are domain-specific and require reasonable defaults (we ship vessel/vehicle/UAV defaults). Second, $R_{\text{data}}$ depends on a Pi-DPM checkpoint trained on a specific corpus; cross-domain transfer requires retraining. Third, GRPO's group baseline is variance-reduction that depends on within-group diversity; for prompts with degenerate completions the group collapses and the advantage is uninformative; we mitigate by sampling with $T=0.7, p=0.95$.
+
+\smallskip
+\textbf{Connection to agentic reasoning.} Pi-GRPO consumes preference data emitted by the sibling agentic system GeoTrace-Agent (companion preprint). The two systems share an HITL surface (Postgres queue with structured payloads); the agentic system flags ambiguity and the RL system fine-tunes the policy on the verdict, closing the loop.
+
+% ============================================================
+\section{Conclusion}
+\label{sec:conc}
+
+We presented Pi-GRPO, a physics-informed reinforcement-learning stack for trajectory generation and reasoning. A hybrid reward with an unbounded hard floor over the S-KBM envelope, three trainers (PPO, DPO with $\gamma_{\text{phys}}$, GRPO) under a shared reward path, vLLM-backed rollouts with prefix caching, content-addressed checkpoints, and a HITL-to-DPO data flywheel together deliver a system that resists reward hacking by construction and integrates naturally with an agentic reasoning surface. The system is open-sourced as a GPU-enabled Docker stack with a CPU-only Hugging Face Spaces demo and a CI-ready GitHub repository.
+
+\section*{Acknowledgments}
+This stack extends prior work conducted at the University of Minnesota with Profs.\ Shashi Shekhar and Vipin Kumar, whose guidance on physics-informed methods, knowledge-guided machine learning, and trajectory mining shaped both the algorithmic core and the broader research agenda. We also thank the Centific team for surfacing the HITL preference-data pattern that motivated the data flywheel.
+
+% ============================================================
+\begin{thebibliography}{99}
+\setlength{\itemsep}{2pt}
+
+\bibitem[Bai et al., 2022]{bai2022constitutional}
+Y. Bai et al. Constitutional AI: Harmlessness from AI feedback. \emph{arXiv:2212.08073}, 2022.
+
+\bibitem[Casper et al., 2023]{casper2023open}
+S. Casper et al. Open problems and fundamental limitations of reinforcement learning from human feedback. \emph{TMLR}, 2023.
+
+\bibitem[Centific, 2025a]{centific2025legalwiz}
+A. Mantravadi, S. Dalmia, A. Mukherji, N. Dave, A. Mittal, and O. Pospelova. LegalWiz: A multi-agent generation framework for contradiction detection in legal documents. \emph{NeurIPS 2025 Workshop on Generative and Protective AI for Content Creation}, 2025.
+
+\bibitem[Centific, 2025b]{centific2025contragen}
+A. Mantravadi, S. Dalmia, A. Mukherji, N. Dave, A. Mittal. ContraGen: A multi-agent generation framework for enterprise contradictions detection. \emph{IEEE ICDMW}, 2025.
+
+\bibitem[Centific, 2025c]{centific2025art}
+A. Mantravadi, S. Dalmia, A. Mukherji. ART: Action-based reasoning task benchmarking for medical AI agents. \emph{AAAI 2026 Workshop on Healthy Aging and Longevity}, 2025.
+
+\bibitem[DeepSeek, 2025]{deepseek2025r1}
+DeepSeek-AI. DeepSeek-R1: Incentivizing reasoning capability in LLMs via reinforcement learning. \emph{arXiv:2501.12948}, 2025.
+
+\bibitem[Eisenstein et al., 2023]{eisenstein2023helping}
+J. Eisenstein et al. Helping or herding? Reward model ensembles mitigate but do not eliminate reward hacking. \emph{arXiv:2312.09244}, 2023.
+
+\bibitem[Ghosh and Sharma et al., 2024]{ghosh2024kriging}
+S. Ghosh, A. Sharma, J. Gupta, A. Subramanian, and S. Shekhar. Towards Kriging-informed conditional diffusion for regional sea-level data downscaling. \emph{ACM SIGSPATIAL}, 2024.
+
+\bibitem[Karpatne et al., 2017]{karpatne2017kgml}
+A. Karpatne et al. Theory-guided data science: A new paradigm for scientific discovery from data. \emph{IEEE TKDE}, 29(10):2318--2331, 2017.
+
+\bibitem[Kong et al., 2015]{kong2015kinematic}
+J. Kong, M. Pfeiffer, G. Schildbach, and F. Borrelli. Kinematic and dynamic vehicle models for autonomous driving control design. \emph{IEEE Intelligent Vehicles Symposium}, 2015.
+
+\bibitem[Kong et al., 2021]{kong2021diffwave}
+Z. Kong et al. DiffWave: A versatile diffusion model for audio synthesis. \emph{ICLR}, 2021.
+
+\bibitem[Kwon et al., 2023]{kwon2023vllm}
+W. Kwon et al. Efficient memory management for large language model serving with PagedAttention. \emph{SOSP}, 2023.
+
+\bibitem[Lee et al., 2024]{lee2024rlaif}
+H. Lee et al. RLAIF: Scaling reinforcement learning from human feedback with AI feedback. \emph{ICML}, 2024.
+
+\bibitem[Ouyang et al., 2022]{ouyang2022training}
+L. Ouyang et al. Training language models to follow instructions with human feedback. \emph{NeurIPS}, 2022.
+
+\bibitem[Qwen Team, 2024]{qwen2024qwen2}
+Qwen Team. Qwen2 technical report. \emph{arXiv:2407.10671}, 2024.
+
+\bibitem[Rafailov et al., 2023]{rafailov2023dpo}
+R. Rafailov, A. Sharma, E. Mitchell, S. Ermon, C. D. Manning, and C. Finn. Direct Preference Optimization: Your language model is secretly a reward model. \emph{NeurIPS}, 2023.
+
+\bibitem[Raissi et al., 2019]{raissi2019pinn}
+M. Raissi, P. Perdikaris, and G. E. Karniadakis. Physics-informed neural networks. \emph{Journal of Computational Physics}, 378:686--707, 2019.
+
+\bibitem[Schulman et al., 2017]{schulman2017ppo}
+J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov. Proximal Policy Optimization algorithms. \emph{arXiv:1707.06347}, 2017.
+
+\bibitem[Shao et al., 2024]{shao2024grpo}
+Z. Shao, P. Wang, et al. DeepSeekMath: Pushing the limits of mathematical reasoning in open language models. \emph{arXiv:2402.03300}, 2024.
+
+\bibitem[Sharma et al., 2025]{sharma2025geoanomalies}
+A. Sharma, M. Yang, M. Farhadloo, S. Ghosh, B. Jayaprakash, and S. Shekhar. Towards physics-informed diffusion for anomaly detection in trajectories. \emph{ACM SIGSPATIAL Workshop on Geospatial Anomaly Detection (GeoAnomalies)}, 2025.
+
+\bibitem[Skalse et al., 2022]{skalse2022defining}
+J. Skalse et al. Defining and characterizing reward hacking. \emph{NeurIPS}, 2022.
+
+\bibitem[Stiennon et al., 2020]{stiennon2020learning}
+N. Stiennon et al. Learning to summarize from human feedback. \emph{NeurIPS}, 2020.
+
+\bibitem[Yang et al., 2025]{yang2025gcdm}
+M. Yang, A. Sharma, M. Farhadloo, B. Jayaprakash, and S. Shekhar. Geo-lucid conditional diffusion models for high physical fidelity trajectory generation. \emph{ACM SIGSPATIAL}, 2025.
+
+\bibitem[Zhu et al., 2024]{zhu2024difftraj}
+Y. Zhu et al. DiffTraj: Generating GPS trajectory with diffusion probabilistic model. \emph{NeurIPS}, 2024.
+
+\end{thebibliography}
+
+\end{document}

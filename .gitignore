@@ -1,0 +1,32 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+runs/
+evaluation/eval_results/
+data/raw/
+*.egg-info/
+dist/
+build/
+wandb/
+
+# coverage artifacts
+.coverage
+coverage.xml
+htmlcov/
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.toc
+paper/*.bbl
+paper/*.blg
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+paper/arxiv-build/
+paper/*-arxiv.tar.gz
