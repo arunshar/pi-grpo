@@ -239,7 +239,7 @@
 
 % ============================================================
 \begin{abstract}
-We present \textbf{Pi-GRPO}, a physics-informed reinforcement-learning stack that fine-tunes trajectory and reasoning policies under a hybrid reward combining a hard kinematic-bicycle envelope, a calibrated soft penalty over the empirical jerk and curvature distribution, a Pi-DPM (physics-informed diffusion) reconstruction-error term, and an optional preference classifier. Three trainers share the same reward path: PPO with a value head and an adaptive Kullback--Leibler controller, DPO with a small physics-aware augmentation $\gamma_{\text{phys}}$ that injects a kinematic penalty into the implicit reward, and GRPO with group-baseline advantages and no value head. The hard term is unbounded by design so a single physical violation dominates the gradient and prevents the well-known reward-hacking failure mode in which models exploit a soft preference signal at the expense of physics. The system supports vLLM-backed online rollouts with prefix caching for $\sim$4$\times$ throughput on long prompts and falls back to a Hugging Face Transformers backend for offline tests; checkpoints are content-addressed under \texttt{runs/<id>/step\_<n>/<sha>.bin} with an audit manifest. A data curator turns human-in-the-loop verdicts exported from our sibling agentic system GeoTrace-Agent into versioned $(\text{prompt}, \text{chosen}, \text{rejected})$ DPO triples, closing a flywheel between agentic reasoning and reward-modeled fine-tuning. We describe the reward, the three trainers, the rollout and checkpoint infrastructure; report golden-dataset and ablation metrics on a CPU-friendly evaluation; and discuss safe-range guards that block runs from drifting into reward-hacking regimes. The system is open-sourced.
+We present \textbf{Pi-GRPO}, a physics-informed reinforcement-learning stack that fine-tunes trajectory and reasoning policies under a hybrid reward combining a hard kinematic-bicycle envelope, a calibrated soft penalty over the empirical jerk and curvature distribution, a Pi-DPM (physics-informed diffusion) reconstruction-error term, and an optional preference classifier. Three trainers share the same reward path: PPO with a value head and an adaptive Kullback--Leibler controller, DPO with a small physics-aware augmentation $\gamma_{\text{phys}}$ that injects a kinematic penalty into the implicit reward, and GRPO with group-baseline advantages and no value head. The hard term is unbounded by design so a single physical violation dominates the gradient and prevents the well-known reward-hacking failure mode in which models exploit a soft preference signal at the expense of physics. The system supports vLLM-backed online rollouts with prefix caching for higher rollout throughput on long prompts and falls back to a Hugging Face Transformers backend for offline tests; checkpoints are content-addressed under \texttt{runs/<id>/step\_<n>/<sha>.bin} with an audit manifest. A data curator turns human-in-the-loop verdicts exported from our sibling agentic system GeoTrace-Agent into versioned $(\text{prompt}, \text{chosen}, \text{rejected})$ DPO triples, closing a flywheel between agentic reasoning and reward-modeled fine-tuning. We describe the reward, the three trainers, the rollout and checkpoint infrastructure; report a CPU-reproducible evaluation comprising a property and unit suite, a measured reward-level reward-hacking probe, hot-path microbenchmarks, and a golden-dataset smoke evaluator, with trained-policy violation rates reported as diagnostic targets pending an in-progress full-scale run; and discuss safe-range guards that block runs from drifting into reward-hacking regimes. The system is open-sourced.
 \end{abstract}
 
 % ============================================================
@@ -487,25 +487,24 @@ The repository includes input guards, content filters, and output filters around
 \section{Experiments}
 \label{sec:expts}
 
-\textbf{Setup.} Base model: \texttt{Qwen2-7B-Instruct} \citep{qwen2024qwen2}; reference: same, frozen. Training data: 11k preference triples from a 30-day GeoTrace-Agent HITL export ($\sim$8k natural HITL labels and $\sim$3k synthesized via the curator's $K\!=\!8$ rollout-and-rank). Hardware: 1$\times$H100 80GB for training; 1$\times$H100 hosting vLLM with prefix caching.
+\textbf{Setup.} The target full-scale configuration is \texttt{Qwen2-7B-Instruct} \citep{qwen2024qwen2} as both policy and frozen reference, fine-tuned on 11k preference triples from a 30-day GeoTrace-Agent HITL export ($\sim$8k natural HITL labels and $\sim$3k synthesized via the curator's $K\!=\!8$ rollout-and-rank), on 1$\times$H100 80GB for training with 1$\times$H100 hosting vLLM with prefix caching; that run is in progress. The results reported in this section are the CPU-reproducible checks that gate it: a property and unit suite, a measured reward-level reward-hacking probe, hot-path microbenchmarks, and the two-item golden evaluator. Trained-policy violation rates (Table~\ref{tab:expected-trends}) remain diagnostic targets until that run completes.
 
 \smallskip
-\textbf{Golden-dataset evaluator.} The CPU-friendly evaluator \texttt{evaluation/offline\_eval.py} ships two synthetic items: a clean trajectory (\texttt{p-001}, expected verdict \textsc{pass}) and a speeding trajectory (\texttt{p-002}, expected \textsc{hard\_violation}). The reward decomposition matches expectations: $R_{\text{hard}}<0$ on \texttt{p-002} and $R_{\text{hard}} = 0$ on \texttt{p-001}. The reasoner's verdict labeling is correct on both.
+\textbf{Golden-dataset evaluator.} The CPU-friendly evaluator \texttt{evaluation/offline\_eval.py} ships two synthetic items: a clean trajectory (\texttt{p-001}, expected verdict \textsc{pass}) and a speeding trajectory (\texttt{p-002}, expected \textsc{hard\_violation}). The reward decomposition matches expectations: $R_{\text{hard}}=-8.66$ on \texttt{p-002} and $R_{\text{hard}} = 0$ on \texttt{p-001}, and the reasoner's verdict labeling is correct on both ($2/2$). This is a smoke test, not a benchmark: it guards the trajectory parser and the reward signs, not generalization.
 
 \smallskip
-\textbf{Reward hacking probe.} We construct an adversarial preference subset where the chosen outputs are physically infeasible. Without $\gamma_{\text{phys}}$, the DPO policy increases its preference margin and reaches a higher mean $R_{\text{pref}}$ but raises $R_{\text{hard}}$ violation rate from 0\,\% to 18\,\%. Setting $\gamma_{\text{phys}}=0.05$ recovers $R_{\text{hard}}=0$ and a slightly lower $R_{\text{pref}}$, the desired tradeoff. Table \ref{tab:hack} summarizes.
+\textbf{Reward-hacking mechanism (reward-level, measured).} The end-to-end trained-policy probe requires a DPO-optimized policy and is part of the in-progress full run; here we isolate and measure, directly on the reward, the mechanism that the trained probe relies on. We build physically infeasible trajectories ($3\times$ the S-KBM speed cap of $12.9$\,m/s) and attach a large hacked preference logit ($+10$) of the kind a compromised preference model would assign. Under a preference-only reward ($w_{\text{hard}}=0$) every infeasible trajectory is accepted (mean total $+10.0$, $0\%$ caught); under the physics-grounded reward ($w_{\text{hard}}=5$, the repository default) the unbounded hard term (mean $-100$) overrides the hacked signal (mean total $-490.5$), rejecting $100\%$ of the infeasible set while feasible trajectories stay at $+10.0$. Table~\ref{tab:hack} summarizes; \texttt{scripts/verify\_reward\_hacking\_mechanism.py} reproduces it on CPU. The trained-policy violation rate under the $\gamma_{\text{phys}}$ DPO ablation is reported as a diagnostic target in Table~\ref{tab:expected-trends} and will be replaced by a measured value after the full run.
 
 \begin{table}[t]
 \centering
-\caption{Reward-hacking probe: physics-aware $\gamma_{\text{phys}}$ recovers 0\,\% hard violation rate at a small cost in mean $R_{\text{pref}}$.}
+\caption{Reward-level reward-hacking probe (measured, CPU). A hacked preference logit ($+10$) favors physically infeasible trajectories; the physics-grounded reward's unbounded hard term overrides it where a preference-only reward does not. Reproduced by \texttt{scripts/verify\_reward\_hacking\_mechanism.py}.}
 \label{tab:hack}
 \begin{tabular}{lccc}
 \toprule
-Configuration & Mean $R_{\text{pref}}$ & Hard violation rate & DPO margin \\
+Reward configuration & Infeasible total & Caught & Feasible total \\
 \midrule
-Vanilla DPO              & 0.62  & 0.18  & 1.4 \\
-DPO + $\gamma_{\text{phys}}=0.05$ & 0.58  & 0.00  & 1.2 \\
-DPO + $\gamma_{\text{phys}}=0.20$ & 0.51  & 0.00  & 0.9 \\
+Preference-only ($w_{\text{hard}}=0$)            & $+10.0$  & $0\%$ (0/5)   & $+10.0$ \\
+Physics-grounded ($w_{\text{hard}}=5$, default)  & $-490.5$ & $100\%$ (5/5) & $+10.0$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -516,16 +515,19 @@ DPO + $\gamma_{\text{phys}}=0.20$ & 0.51  & 0.00  & 0.9 \\
 \smallskip
 \textbf{Safe-range guard.} A randomized hyperparameter sweep with 100 random samples from outside the safe range produced 100\,\% \texttt{UnsafeRange} rejections; samples inside the range produced 0 \texttt{UnsafeRange} false positives, by construction.
 
+\smallskip
+\textbf{Microbenchmarks (measured, CPU).} The hot-path reward operations are cheap and are not the training bottleneck: the per-step S-KBM evaluator runs at $\sim$23k ops/s ($43\,\mu$s), the full hybrid \texttt{PhysicsReward.score} at $\sim$19k ops/s ($52\,\mu$s), and preference synthesis ($K\!=\!4$) at $\sim$712k ops/s ($1.4\,\mu$s), single-threaded via \texttt{scripts/bench.py}. Rollout throughput, not reward computation, is the online bottleneck, which is why vLLM prefix caching sits on the rollout path rather than the reward path.
+
 \paragraph{Evaluation philosophy:}
 The current repository is intentionally split into fast checks and longer training runs. Fast checks are CI-friendly: unit tests verify S-KBM arithmetic, reward signs, GRPO advantage normalization, KL-controller boundedness, and API integration. Long runs should be executed with the user's preferred base model and deployment corpus. This paper therefore separates \emph{implementation evidence} from \emph{expected trend evidence}. Implementation evidence is what the repository can check quickly; trend evidence is the direction a correct run should follow when the same code is scaled to a real preference dataset. This separation is useful because it prevents paper prose from pretending that a two-case golden evaluator is a full benchmark while still documenting what a healthy run should look like.
 
 \begin{table}[t]
 \centering
-\caption{Repository-grounded acceptance checks. These are smoke/regression checks rather than external benchmarks; they protect the mathematical invariants that the later full-scale run depends on.}
+\caption{Repository-grounded acceptance checks, all passing ($13/13$ tests, run on CPU). These are smoke/regression checks rather than external benchmarks; they protect the mathematical invariants that the later full-scale run depends on.}
 \label{tab:repo-checks}
 \begin{tabular}{p{0.30\linewidth}p{0.42\linewidth}p{0.18\linewidth}}
 \toprule
-Check & Evidence captured & Expected status \\
+Check & Evidence captured & Status \\
 \midrule
 S-KBM update & position, heading, velocity update matches discrete bicycle equations & pass \\
 Reward signs & clean path has zero hard penalty; speeding path has negative hard term & pass \\
