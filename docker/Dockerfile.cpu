@@ -1,0 +1,41 @@
+# CPU reproducibility image for Pi-GRPO.
+#
+# This is NOT the serving/training image. The production image
+# (app/Dockerfile) is a CUDA/vLLM/DeepSpeed image meant for GPU hosts and
+# cannot be meaningfully built or tested without an NVIDIA GPU.
+#
+# This image has one job: build with no CUDA and prove that the determinic
+# core of the repo (S-KBM physics, the hybrid reward, GRPO advantage
+# normalization, the KL controller) and the reward-level reward-hacking probe
+# produce identical results inside a clean container as on bare metal. It is
+# the artifact behind the "consistent results" claim.
+#
+# Build:  docker build -f docker/Dockerfile.cpu -t pi-grpo-repro:cpu .
+# Run:    docker run --rm pi-grpo-repro:cpu
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONHASHSEED=0 \
+    PYTHONPATH=/srv
+
+WORKDIR /srv
+
+# CPU-only dependencies for the deterministic checks. Deliberately excludes the
+# heavy GPU stack (torch CUDA build, vLLM, DeepSpeed, Ray, bitsandbytes): none
+# of it is needed to verify the physics and reward logic.
+RUN pip install --no-cache-dir \
+        numpy scipy shapely structlog hypothesis pytest pyyaml torch
+
+# Copy only what the checks need (the .dockerignore keeps .venv/.git out of the
+# build context).
+COPY pyproject.toml ./
+COPY app /srv/app
+COPY tests /srv/tests
+COPY scripts /srv/scripts
+COPY evaluation /srv/evaluation
+COPY configs /srv/configs
+
+# Default: run the deterministic suite, then the reward-level reward-hacking
+# probe. Exit non-zero if anything fails.
+CMD ["sh", "-c", "pytest tests/test_reward_properties.py tests/test_kinematic_bicycle.py tests/test_physics_reward.py tests/test_reward_sanity.py tests/test_grpo_advantage.py tests/test_kl_controller.py -q && echo '--- reward-hacking probe ---' && python scripts/verify_reward_hacking_mechanism.py"]
