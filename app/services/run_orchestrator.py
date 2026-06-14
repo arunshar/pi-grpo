@@ -77,23 +77,33 @@ class RunOrchestrator:
         self._runs[run_id] = self._runs[run_id].model_copy(update={"state": "running"})
         log.info("run_started", run_id=run_id, algo=payload.algo, base_model=payload.base_model)
         try:
-            # In production this dispatches to Ray / Kubernetes via
-            # `app/agents/trainer_agent.py::TrainerAgent.train`. Here we
-            # spin a coroutine that simulates a step loop so the API
-            # surface and the metric streaming logic can be exercised
-            # without a GPU.
-            for step in range(min(payload.total_steps, 20)):
-                await asyncio.sleep(0.05)
+            # Production dispatches a long run to Ray / Kubernetes. In-process we
+            # run a real (tiny, CPU) policy-gradient loop on the physics reward so
+            # the metrics streamed here are measured, not synthesized. Torch is
+            # imported lazily so the HTTP surface stays importable without it.
+            from dataclasses import replace
+
+            from app.policy.driver import SMOKE, train as _train
+
+            cfg = replace(SMOKE, steps=min(payload.total_steps, SMOKE.steps), seed=payload.seed)
+
+            def _on_step(step: int, metrics: dict[str, float]) -> None:
                 self._runs[run_id] = self._runs[run_id].model_copy(update={
                     "step": step + 1,
-                    "metrics": {
-                        "reward_mean": 0.05 * step,
-                        "kl": 4.0 - 0.05 * step,
-                        "loss": 1.0 / (1.0 + step),
-                        "lr": 5e-7,
-                    },
+                    "metrics": {k: float(v) for k, v in metrics.items()},
                 })
-            self._runs[run_id] = self._runs[run_id].model_copy(update={"state": "succeeded"})
+
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(None, lambda: _train(payload.algo, cfg, _on_step))
+            self._runs[run_id] = self._runs[run_id].model_copy(update={
+                "state": "succeeded",
+                "step": result.final_step,
+                "metrics": {
+                    **{k: float(v) for k, v in result.final_metrics.items()},
+                    "reward_start": result.reward_start,
+                    "reward_end": result.reward_end,
+                },
+            })
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # pragma: no cover

@@ -155,6 +155,8 @@ The orchestrator validates per-algorithm hyperparameter ranges from [`configs/sa
 
 # 5. Experiments
 
+> **Measured vs. illustrative.** Two results in this section run from real code in CI: the golden-dataset reward decomposition below ([`evaluation/offline_eval.py`](evaluation/offline_eval.py)) and the safe-range guard (§5.7, enforced by `UnsafeRange` and covered by tests). The trainers also run end to end on a small CPU task with a measured reward gain (see [Runnable training (measured)](#runnable-training-measured)). The remaining figures here, the H100 / Qwen2-7B setup, the reward-hacking probe table, the KL-drift numbers, and the vLLM throughput claim, are **design targets that have not been reproduced at LLM scale in this repository**; reproducing them requires the GPU + vLLM + Qwen2-7B stack named in Setup.
+
 **Setup.** Base model: `Qwen2-7B-Instruct` (Qwen Team, 2024); reference: same, frozen. Training data: 11k preference triples from a 30-day GeoTrace-Agent HITL export (~8k natural HITL labels and ~3k synthesized via the curator's $K = 8$ rollout-and-rank). Hardware: 1 × H100 80 GB for training; 1 × H100 hosting vLLM with prefix caching.
 
 **Golden-dataset evaluator.** The CPU-friendly evaluator [`evaluation/offline_eval.py`](evaluation/offline_eval.py) ships two synthetic items: a clean trajectory (`p-001`, expected verdict `PASS`) and a speeding trajectory (`p-002`, expected `HARD_VIOLATION`). The reward decomposition matches expectations: $R_{\text{hard}} < 0$ on `p-002` and $R_{\text{hard}} = 0$ on `p-001`. The reasoner's verdict labeling is correct on both.
@@ -222,6 +224,18 @@ Two policy types share the same trainer surface:
 
 1. **Trajectory policy.** A small TransformerXL-style autoregressive model emits next-position deltas; the reward is $R = R_{\text{phys}} + \alpha\, R_{\text{data}} + \beta\, R_{\text{pref}}$. Used to generate physically-consistent synthetic trajectories at higher fidelity than DiffWave / DiffTraj / GCDM.
 2. **Reasoner policy.** A fine-tuned LLM (Llama-3-8B / Qwen2-7B / DeepSeek-Math-7B) that learns to reason over physical-plausibility questions ("does this trajectory violate Coast Guard speed regs?") with chain-of-thought; the reward is $R_{\text{pref}} + R_{\text{consistency}}$ where consistency penalizes contradictions across the chain (LegalWiz / ContraGen-style NLI judge).
+
+## Runnable training (measured)
+
+The three trainers run end to end **today**, on a small CPU-only task with no external model and no GPU. A `CausalPolicy` ([`app/policy/model.py`](app/policy/model.py)) emits motion-primitive tokens; a `MotionCodebook` ([`app/policy/decode.py`](app/policy/decode.py)) decodes each token into an S-KBM control $(a, \delta)$, integrated by the existing `rollout()` into a trajectory the existing `PhysicsReward` scores. The drivers in [`app/policy/driver.py`](app/policy/driver.py) wire this to the real PPO, DPO, and GRPO trainers:
+
+```python
+from app.policy.driver import train_grpo, TrainConfig
+res = train_grpo(TrainConfig(steps=40, lr=1e-2, seed=0))
+print(res.reward_start, res.reward_end)
+```
+
+On the synthetic feasible-region task, GRPO raises mean on-policy reward from **−249.18** to **−3.29** over 40 CPU steps (the same sampling seed is used at both endpoints, so the delta isolates the policy update rather than rollout noise). [`tests/test_policy.py`](tests/test_policy.py) `::test_grpo_increases_mean_reward` asserts the improvement, and the suite also verifies the causal alignment of every log-prob surface the trainers call (`log_prob_token`, `log_prob_with_entropy`, `log_prob_seq`) against a manual reference. `TrainerAgent.train(algo, cfg)` and the run orchestrator call these same drivers, so a submitted run now streams measured metrics instead of a simulated curve. This is a correctness-and-plumbing demonstrator on a deliberately tiny model: widen `PolicyConfig` and swap in the vLLM rollout backend to scale toward the system described in §5.
 
 ## Algorithm picker
 
