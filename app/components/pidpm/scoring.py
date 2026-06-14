@@ -54,6 +54,10 @@ class PiDPM(nn.Module):
     # --------------------------------------------------------------- io
     @classmethod
     def from_checkpoint(cls, path: str, map_location: str | torch.device = "cpu") -> "PiDPM":
+        # torch>=2.6 defaults torch.load to weights_only=True; our checkpoint carries
+        # a PiDPMConfig dataclass under "cfg", so allow exactly that class to unpickle.
+        if hasattr(torch.serialization, "add_safe_globals"):
+            torch.serialization.add_safe_globals([PiDPMConfig])
         ckpt = torch.load(path, map_location=map_location)
         cfg = ckpt.get("cfg") or PiDPMConfig()
         model = cls(cfg)
