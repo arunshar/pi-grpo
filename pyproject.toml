@@ -32,7 +32,8 @@ dependencies = [
   "opentelemetry-sdk>=1.25",
   "opentelemetry-exporter-otlp>=1.25",
   "wandb>=0.17",
-  "ray[default]>=2.34",
+  "ray[default]>=2.40",  # >=2.40: local_mode removed; the reward-actor pool + rollout use ray.init(num_cpus)
+  "matplotlib>=3.8",     # scripts/grpo_plots.py scaling figures + tests/test_grpo_plots.py
   "vllm>=0.5.3",
   "orjson>=3.10",
   "rich>=13.7",
@@ -48,6 +49,8 @@ dev = [
   "hypothesis>=6.108",
 ]
 frontend = ["streamlit>=1.36", "plotly>=5.22"]
+ray = ["ray[default]>=2.40"]          # reward-actor pool + ray driver + scaling sweep (compute node)
+plots = ["matplotlib>=3.8"]           # static scaling figures (Agg, headless)
 
 [build-system]
 requires = ["hatchling"]
