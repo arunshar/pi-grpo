@@ -43,7 +43,7 @@ class PiDpmScorer:
             self.model = PiDPM.from_checkpoint(path, map_location=self.device).to(self.device).eval()
             log.info("pidpm_loaded", kind="state_dict", path=path)
             return
-        except Exception as exc:  # noqa: BLE001 - fall through to torchscript
+        except Exception as exc:
             log.debug("pidpm_state_dict_load_failed", err=str(exc))
         try:
             self.module = torch.jit.load(path, map_location=self.device).eval()

@@ -178,7 +178,7 @@ class CausalPolicy(nn.Module):
         logp_old = torch.stack(logps, dim=1).view(b, k, max_new_tokens)
         return rollout, logp_old
 
-    def frozen_clone(self) -> "CausalPolicy":
+    def frozen_clone(self) -> CausalPolicy:
         """A detached eval-mode copy for use as the reference policy."""
         ref = copy.deepcopy(self)
         ref.eval()
@@ -222,8 +222,8 @@ def build_policy_pair(cfg: PolicyConfig) -> tuple[CausalPolicy, CausalPolicy]:
 
 
 __all__ = [
-    "PolicyConfig",
     "CausalPolicy",
+    "PolicyConfig",
     "ValueHead",
     "build_policy_pair",
 ]

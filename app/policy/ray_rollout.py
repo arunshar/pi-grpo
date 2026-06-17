@@ -303,12 +303,12 @@ def generate_rollouts(
 
 
 __all__ = [
-    "RayRolloutConfig",
     "GenerateFn",
+    "RayRolloutConfig",
+    "generate_rollouts",
+    "generate_rollouts_ray",
+    "generate_rollouts_serial",
+    "merge_rollouts",
     "split_prompt_indices",
     "split_prompts",
-    "merge_rollouts",
-    "generate_rollouts",
-    "generate_rollouts_serial",
-    "generate_rollouts_ray",
 ]

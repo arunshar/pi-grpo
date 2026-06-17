@@ -20,7 +20,6 @@ import torch
 
 from app.policy import ray_rollout as rr
 
-
 # --------------------------------------------------------------------------- stub
 
 
@@ -171,7 +170,7 @@ def test_ray_dispatch_covers_every_prompt_exactly_once(monkeypatch) -> None:
 
     monkeypatch.setattr(rr, "generate_rollouts_ray", fake_ray)
 
-    roll, logp = rr.generate_rollouts(policy=None, prompts=prompts, cfg=cfg, backend="ray")
+    roll, _logp = rr.generate_rollouts(policy=None, prompts=prompts, cfg=cfg, backend="ray")
     assert roll.shape == (b, k, t_r)
     # every prompt dispatched exactly once: no drop, no duplicate
     assert torch.all(gen_counts == 1)

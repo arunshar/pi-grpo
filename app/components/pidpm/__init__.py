@@ -36,14 +36,14 @@ from .config import PiDPMConfig
 from .diffusion import GaussianDiffusion
 from .model import TrajectoryDenoiser
 from .physics import PhysicsResidual, kinematics
-from .scoring import PiDPM, AnomalyScore
+from .scoring import AnomalyScore, PiDPM
 
 __all__ = [
-    "PiDPMConfig",
-    "GaussianDiffusion",
-    "TrajectoryDenoiser",
-    "PhysicsResidual",
-    "kinematics",
-    "PiDPM",
     "AnomalyScore",
+    "GaussianDiffusion",
+    "PhysicsResidual",
+    "PiDPM",
+    "PiDPMConfig",
+    "TrajectoryDenoiser",
+    "kinematics",
 ]

@@ -157,7 +157,7 @@ def _run_all() -> int:
         try:
             fn()
             print(f"PASS {fn.__name__}")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             failed += 1
             print(f"FAIL {fn.__name__}: {exc!r}")
     print(f"\n{len(fns) - failed}/{len(fns)} passed")

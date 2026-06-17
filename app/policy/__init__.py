@@ -12,14 +12,14 @@ from app.policy.driver import SMOKE, TrainConfig, TrainResult, train
 from app.policy.model import CausalPolicy, PolicyConfig, ValueHead, build_policy_pair
 
 __all__ = [
+    "SMOKE",
     "CausalPolicy",
-    "PolicyConfig",
-    "ValueHead",
-    "build_policy_pair",
-    "MotionCodebook",
     "CodebookConfig",
+    "MotionCodebook",
+    "PolicyConfig",
     "TrainConfig",
     "TrainResult",
-    "SMOKE",
+    "ValueHead",
+    "build_policy_pair",
     "train",
 ]

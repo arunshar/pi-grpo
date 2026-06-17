@@ -31,7 +31,6 @@ from app.policy.ray_reward_pool import (
     _shard_bounds,
 )
 
-
 # --------------------------------------------------------------------------- fixtures
 
 
@@ -196,8 +195,8 @@ def test_mock_pool_splits_into_expected_shards(monkeypatch: pytest.MonkeyPatch) 
     pool = RayRewardPool(n_actors=1)  # construct serially so no real cluster spins up
     # Force the parallel branch and install fake actors sharing the pool's path.
     recorder: list = []
-    pool._use_ray = True  # noqa: SLF001 - white-box test of the dispatch path
-    pool._actors = [  # noqa: SLF001
+    pool._use_ray = True
+    pool._actors = [
         _FakeActor(pool._codebook, pool._reward, pool._scorer, recorder)
         for _ in range(n_actors)
     ]
@@ -235,8 +234,8 @@ def test_mock_single_shard_when_one_actor(monkeypatch: pytest.MonkeyPatch) -> No
     b, k, _t = rollouts.shape
     pool = RayRewardPool(n_actors=1)
     recorder: list = []
-    pool._use_ray = True  # noqa: SLF001
-    pool._actors = [_FakeActor(pool._codebook, pool._reward, pool._scorer, recorder)]  # noqa: SLF001
+    pool._use_ray = True
+    pool._actors = [_FakeActor(pool._codebook, pool._reward, pool._scorer, recorder)]
     if ray_reward_pool.ray is None:
         monkeypatch.setattr(ray_reward_pool, "ray", type("R", (), {"get": staticmethod(lambda x: x)}))
     else:
@@ -259,7 +258,7 @@ ray_installed = ray_reward_pool._RAY_AVAILABLE
 @pytest.fixture()
 def ray_cluster():
     """Tiny 2-CPU local Ray cluster. No local_mode (removed in Ray>=2.40)."""
-    import ray  # noqa: PLC0415
+    import ray
 
     ray.init(num_cpus=2, include_dashboard=False, ignore_reinit_error=True)
     try:

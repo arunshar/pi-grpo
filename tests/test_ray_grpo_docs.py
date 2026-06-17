@@ -95,4 +95,4 @@ def test_no_local_mode_recommended(doc_text: str) -> None:
 def test_no_em_or_en_dashes(doc_text: str) -> None:
     # House style: no em/en dashes anywhere in generated content.
     assert "—" not in doc_text, "doc contains an em dash"
-    assert "–" not in doc_text, "doc contains an en dash"
+    assert "–" not in doc_text, "doc contains an en dash"  # noqa: RUF001  (en dash is intentional test data)

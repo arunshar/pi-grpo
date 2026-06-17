@@ -70,7 +70,6 @@ from __future__ import annotations
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Optional
 
 import torch
 
@@ -85,17 +84,17 @@ from app.policy.ray_driver import RewardPool, _SerialRewardPool
 from app.trainers.grpo_trainer import GrpoBatch, GrpoConfig, GrpoTrainer
 
 __all__ = [
-    "compute_staleness_lag",
-    "staleness_stats",
-    "StalenessStats",
-    "QueueFullPolicy",
-    "BoundedStalenessQueue",
-    "StaleBatch",
-    "StalenessConfig",
     "AsyncTrainResult",
+    "BoundedStalenessQueue",
+    "QueueFullPolicy",
+    "StaleBatch",
     "StalenessComparison",
-    "train_grpo_async_staleness",
+    "StalenessConfig",
+    "StalenessStats",
+    "compute_staleness_lag",
     "run_staleness_comparison",
+    "staleness_stats",
+    "train_grpo_async_staleness",
 ]
 
 
@@ -433,7 +432,7 @@ def _sample_and_score(
 def train_grpo_async_staleness(
     cfg: TrainConfig = TrainConfig(),
     staleness: StalenessConfig = StalenessConfig(),
-    reward_pool: Optional[RewardPool] = None,
+    reward_pool: RewardPool | None = None,
 ) -> AsyncTrainResult:
     """Async / off-policy GRPO with a bounded staleness queue (in-process schedule).
 
@@ -477,7 +476,7 @@ def train_grpo_async_staleness(
     producer_version = 0
     wall_t0 = time.perf_counter()
 
-    for step in range(cfg.steps):
+    for _step in range(cfg.steps):
         learner_version = trainer.step  # 0-based; bumps after each step_update
 
         # ---- PRODUCE: run ahead and offer batches to the queue ----
@@ -543,7 +542,7 @@ def train_grpo_async_staleness(
 def run_staleness_comparison(
     cfg: TrainConfig = TrainConfig(),
     max_staleness: int = 2,
-    reward_pool: Optional[RewardPool] = None,
+    reward_pool: RewardPool | None = None,
 ) -> StalenessComparison:
     """Run the on-policy baseline and the async/off-policy variant, side by side.
 

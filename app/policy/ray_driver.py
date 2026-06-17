@@ -51,7 +51,7 @@ from app.trainers.grpo_trainer import GrpoBatch, GrpoConfig, GrpoTrainer
 
 # Re-exported so callers can construct a comparable config without importing the
 # serial driver as well. This is the SAME class, not a copy.
-__all__ = ["RewardPool", "RayTrainResult", "train_grpo_ray", "default_reward_pool"]
+__all__ = ["RayTrainResult", "RewardPool", "default_reward_pool", "train_grpo_ray"]
 
 
 class RewardPool(Protocol):

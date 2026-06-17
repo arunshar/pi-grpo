@@ -16,7 +16,6 @@ admission logic is pure Python. What is pinned down here:
 from __future__ import annotations
 
 import pytest
-import torch
 
 from app.policy.driver import TrainConfig, train_grpo
 from app.policy.ray_staleness import (
@@ -29,7 +28,6 @@ from app.policy.ray_staleness import (
     staleness_stats,
     train_grpo_async_staleness,
 )
-
 
 # A tiny config: a few steps, small model, so the whole suite runs in seconds.
 _TINY = TrainConfig(steps=4, batch_prompts=2, group_size=4, horizon=6, d_model=32, n_layers=1)

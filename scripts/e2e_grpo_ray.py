@@ -363,10 +363,10 @@ if __name__ == "__main__":  # pragma: no cover
 
 __all__ = [
     "E2EConfig",
-    "remap_step_record",
     "classify_scaling",
-    "parse_actor_counts_arg",
-    "verdict_line",
-    "run_sweep_real",
     "main",
+    "parse_actor_counts_arg",
+    "remap_step_record",
+    "run_sweep_real",
+    "verdict_line",
 ]

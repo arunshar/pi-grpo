@@ -93,7 +93,7 @@ def test_frozen_clone_is_detached() -> None:
     ref = pol.frozen_clone()
     assert all(not p.requires_grad for p in ref.parameters())
     # same initial weights
-    for a, b in zip(pol.parameters(), ref.parameters()):
+    for a, b in zip(pol.parameters(), ref.parameters(), strict=False):
         assert torch.allclose(a, b)
 
 
@@ -157,5 +157,5 @@ def test_dpo_step_runs() -> None:
 def test_build_policy_pair_shares_init() -> None:
     cfg = _tiny_cfg()
     pol, ref = build_policy_pair(cfg)
-    for a, b in zip(pol.parameters(), ref.parameters()):
+    for a, b in zip(pol.parameters(), ref.parameters(), strict=False):
         assert torch.allclose(a, b)

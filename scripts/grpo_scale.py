@@ -139,10 +139,7 @@ def extract_step_records(result: Any) -> list[dict[str, float]]:
     bare list of dicts. Every record is filled out with all DECOMP timing keys
     (missing ones become ``nan``) so downstream row building is total.
     """
-    if hasattr(result, "history"):
-        raw = result.history
-    else:
-        raw = result
+    raw = result.history if hasattr(result, "history") else result
     if not isinstance(raw, (list, tuple)):
         raise TypeError(
             "train_grpo_ray result must expose a list of per-step dicts via "
@@ -372,8 +369,8 @@ def _run_one(num_reward_actors: int, cfg: SweepConfig) -> list[dict[str, float]]
     learn_s.
     """
     try:
-        from app.policy.ray_driver import train_grpo_ray, default_reward_pool
         from app.policy.driver import TrainConfig
+        from app.policy.ray_driver import default_reward_pool, train_grpo_ray
     except ImportError as exc:  # pragma: no cover - exercised only on a live cluster
         raise RuntimeError(
             "Ray GRPO entrypoint not importable. This sweep requires "
@@ -428,22 +425,22 @@ if __name__ == "__main__":  # pragma: no cover
 
 
 __all__ = [
-    "SCALING_COLUMNS",
     "DECOMP_COLUMNS",
     "DEFAULT_ACTOR_COUNTS",
+    "SCALING_COLUMNS",
     "SweepConfig",
-    "n_trajectories",
-    "trajectories_per_sec",
-    "extract_step_records",
-    "step_total_seconds",
+    "attach_speedups",
+    "build_arg_parser",
     "build_decomp_rows",
     "build_scaling_row",
-    "attach_speedups",
-    "write_csv",
-    "format_summary",
-    "build_arg_parser",
-    "parse_actor_counts",
     "config_from_args",
-    "run_sweep",
+    "extract_step_records",
+    "format_summary",
     "main",
+    "n_trajectories",
+    "parse_actor_counts",
+    "run_sweep",
+    "step_total_seconds",
+    "trajectories_per_sec",
+    "write_csv",
 ]

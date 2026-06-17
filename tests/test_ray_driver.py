@@ -29,7 +29,6 @@ from app.policy.ray_driver import (
     train_grpo_ray,
 )
 
-
 # --------------------------------------------------------------------------- pools
 
 
@@ -87,7 +86,7 @@ def test_ray_driver_bit_identical_to_serial_train_grpo() -> None:
     assert parallel.reward_end == serial.reward_end
     assert len(parallel.history) == len(serial.history)
     # Every optimization-relevant metric matches exactly, step for step.
-    for ph, sh in zip(parallel.history, serial.history):
+    for ph, sh in zip(parallel.history, serial.history, strict=False):
         for key in ("loss", "pg_loss", "kl", "reward_mean", "reward_std", "grad_norm", "lr"):
             assert ph[key] == sh[key], f"{key} diverged: {ph[key]} != {sh[key]}"
 

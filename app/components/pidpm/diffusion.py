@@ -118,7 +118,9 @@ class GaussianDiffusion(nn.Module):
         return x
 
     @torch.no_grad()
-    def reconstruct(self, x0: torch.Tensor, cond: torch.Tensor | None = None, t_eval: int | None = None) -> torch.Tensor:
+    def reconstruct(
+        self, x0: torch.Tensor, cond: torch.Tensor | None = None, t_eval: int | None = None
+    ) -> torch.Tensor:
         """Noise x0 to level t_eval then DDIM-denoise back to x0_hat."""
         t_eval = t_eval or self.cfg.eval_noise_t
         t = torch.full((x0.shape[0],), t_eval, device=x0.device, dtype=torch.long)

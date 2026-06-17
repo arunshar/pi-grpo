@@ -49,7 +49,7 @@ import matplotlib
 
 matplotlib.use("Agg")  # head-less: must precede pyplot import
 
-import matplotlib.pyplot as plt  # noqa: E402  (intentional: backend set first)
+import matplotlib.pyplot as plt
 
 # The three phases of one GRPO step, in execution order. Used by the
 # decomposition plot and its fraction helper.
@@ -364,15 +364,15 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 __all__ = [
     "PHASES",
-    "throughput_of",
-    "speedup_series",
+    "decomposition_fractions",
     "efficiency_series",
     "ideal_linear_throughput",
-    "decomposition_fractions",
-    "plot_throughput_vs_workers",
+    "main",
     "plot_scaling_efficiency",
     "plot_step_decomposition",
-    "main",
+    "plot_throughput_vs_workers",
+    "speedup_series",
+    "throughput_of",
 ]
 
 

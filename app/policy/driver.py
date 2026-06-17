@@ -279,4 +279,4 @@ def train(algo: str, cfg: TrainConfig = TrainConfig(), on_step: StepCallback | N
     return TRAINERS[algo](cfg, on_step)
 
 
-__all__ = ["TrainConfig", "TrainResult", "SMOKE", "train", "train_grpo", "train_ppo", "train_dpo"]
+__all__ = ["SMOKE", "TrainConfig", "TrainResult", "train", "train_dpo", "train_grpo", "train_ppo"]

@@ -44,7 +44,7 @@ try:  # Ray is an optional dependency; the pool degrades to serial without it.
     import ray
 
     _RAY_AVAILABLE = True
-except Exception:  # noqa: BLE001 - any import failure means "no Ray here"
+except Exception:
     ray = None  # type: ignore[assignment]
     _RAY_AVAILABLE = False
 
@@ -264,7 +264,7 @@ class RayRewardPool:
         # Dispatch one shard per actor (round-robin if fewer shards than actors,
         # which _shard_bounds prevents by capping at n_items).
         futures = []
-        for actor, (start, stop) in zip(self._actors, bounds):
+        for actor, (start, stop) in zip(self._actors, bounds, strict=False):
             futures.append(actor.score_shard.remote(flat[start:stop]))
         results = ray.get(futures)  # pragma: no cover - live-cluster path
         totals: list[float] = []
@@ -276,9 +276,9 @@ class RayRewardPool:
 
 
 __all__ = [
-    "RewardPathSpec",
     "RayRewardPool",
-    "_shard_bounds",
-    "_score_flat_shard",
+    "RewardPathSpec",
     "_assemble",
+    "_score_flat_shard",
+    "_shard_bounds",
 ]

@@ -13,7 +13,8 @@ from dataclasses import dataclass
 
 import structlog
 
-from app.policy.driver import SMOKE, TrainConfig, TrainResult, train as _train
+from app.policy.driver import SMOKE, TrainConfig, TrainResult
+from app.policy.driver import train as _train
 
 log = structlog.get_logger(__name__)
 

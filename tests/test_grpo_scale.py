@@ -11,14 +11,14 @@ Run on a compute node with:
 from __future__ import annotations
 
 import csv
-import math
-
-import pytest
 
 # scripts/ is not a package; import by path-insertion so the test is runnable
 # both from the repo root (PYTHONPATH=.) and standalone.
 import importlib.util
+import math
 from pathlib import Path
+
+import pytest
 
 _SCALE_PATH = Path(__file__).resolve().parent.parent / "scripts" / "grpo_scale.py"
 _spec = importlib.util.spec_from_file_location("grpo_scale", _SCALE_PATH)
@@ -28,7 +28,8 @@ gs = importlib.util.module_from_spec(_spec)
 # (a default_factory under `from __future__ import annotations`) resolves; without
 # it dataclasses._process_class hits sys.modules.get(name) is None -> AttributeError
 # at collection time.
-import sys
+import sys  # noqa: E402  (intentional: must run after the spec/module dance above)
+
 sys.modules[_spec.name] = gs
 _spec.loader.exec_module(gs)
 
@@ -82,7 +83,7 @@ def test_step_total_seconds_nan_tolerant() -> None:
 
 def test_extract_from_history_attribute() -> None:
     class _Result:
-        history = [{"sample_s": 0.1, "reward_s": 0.5, "learn_s": 0.2, "n_traj": 64}]
+        history = [{"sample_s": 0.1, "reward_s": 0.5, "learn_s": 0.2, "n_traj": 64}]  # noqa: RUF012
 
     recs = gs.extract_step_records(_Result())
     assert len(recs) == 1

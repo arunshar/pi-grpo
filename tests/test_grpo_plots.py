@@ -16,7 +16,6 @@ pytest.importorskip("matplotlib")  # skip cleanly on a matplotlib-less lane inst
 
 from scripts import grpo_plots as gp
 
-
 # --------------------------------------------------------------------------- helpers
 
 

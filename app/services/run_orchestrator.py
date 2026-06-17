@@ -83,7 +83,8 @@ class RunOrchestrator:
             # imported lazily so the HTTP surface stays importable without it.
             from dataclasses import replace
 
-            from app.policy.driver import SMOKE, train as _train
+            from app.policy.driver import SMOKE
+            from app.policy.driver import train as _train
 
             cfg = replace(SMOKE, steps=min(payload.total_steps, SMOKE.steps), seed=payload.seed)
 

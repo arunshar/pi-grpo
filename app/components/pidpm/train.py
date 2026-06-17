@@ -50,7 +50,7 @@ def train(cfg: PiDPMConfig, n: int = 4096, out: str | None = None, device: str |
             scaler.step(opt)
             scaler.update()
             with torch.no_grad():
-                for pe, pm in zip(ema.parameters(), model.parameters()):
+                for pe, pm in zip(ema.parameters(), model.parameters(), strict=False):
                     pe.mul_(cfg.ema_decay).add_(pm, alpha=1 - cfg.ema_decay)
             for k in running:
                 running[k] += float(out_d[k])
