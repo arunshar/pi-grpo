@@ -43,15 +43,31 @@ def build_arg_parser() -> argparse.ArgumentParser:
     ap.add_argument("--group-size", type=int, default=8, help="K rollouts per prompt")
     ap.add_argument("--horizon", type=int, default=24, help="motion-primitive ids per trajectory")
     ap.add_argument("--max-new-tokens", type=int, default=160)
-    ap.add_argument("--lr", type=float, default=1e-5)
+    ap.add_argument("--lr", type=float, default=7e-6)  # lowered for KL stability over a long run
     ap.add_argument("--clip-coef", type=float, default=0.2)
     ap.add_argument("--target-kl", type=float, default=4.0)
     ap.add_argument("--lora-r", type=int, default=16)
     ap.add_argument("--lora-alpha", type=int, default=32)
-    ap.add_argument("--temperature", type=float, default=1.0)
+    # Sampling: temperature alone at 1.0 let the K group rollouts collapse to an
+    # identical completion (zero within-group reward variance -> zero GRPO advantage
+    # -> frozen training). top_p + a slightly hotter default keep the group diverse.
+    ap.add_argument("--temperature", type=float, default=1.1)
+    ap.add_argument("--top-p", type=float, default=0.95)
+    # KL coefficient: a floor stops the adaptive controller from decaying it to ~0
+    # (which removed all restraint toward the diverse base policy and let the policy
+    # collapse onto one mode). init + min bound the controller.
+    ap.add_argument("--kl-coef-init", type=float, default=0.2)
+    ap.add_argument("--kl-coef-min", type=float, default=0.05)
+    ap.add_argument("--kl-coef-max", type=float, default=2.0,
+                    help="upper clamp so the adaptive controller cannot run away (it hit ~100 without one)")
+    # trust-region brake: skip an update whose KL already blew past this, so a long
+    # unattended run stalls safely instead of diverging (the first smoke hit KL~19).
+    ap.add_argument("--kl-hard-cap", type=float, default=16.0)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out-dir", default="runs/llm_grpo")
     ap.add_argument("--log-every", type=int, default=1)
+    ap.add_argument("--log-completions", type=int, default=0,
+                    help="if >0, dump 2 sample completions every N steps (smoke diagnostic)")
     return ap
 
 
@@ -172,7 +188,7 @@ def main(argv=None) -> int:
     codebook, reward, scorer = _build_reward_path()
     vocab_size, horizon = codebook.vocab_size, args.horizon
     prompt = build_prompt(tok, vocab_size, horizon)
-    kl_coef = 0.1
+    kl_coef = args.kl_coef_init
 
     for step in range(args.steps):
         # ---- rollouts: K samples for each of B identical prompts (group baseline) ----
@@ -181,7 +197,7 @@ def main(argv=None) -> int:
         prompt_len = int(enc["attention_mask"][0].sum().item())
         with torch.no_grad():
             gen = model.generate(
-                **enc, do_sample=True, temperature=args.temperature,
+                **enc, do_sample=True, temperature=args.temperature, top_p=args.top_p,
                 max_new_tokens=args.max_new_tokens, pad_token_id=tok.pad_token_id,
             )
         full = gen  # (n, prompt_len + new)
@@ -212,22 +228,43 @@ def main(argv=None) -> int:
         pg_loss = -torch.min(unclipped, clipped).mean()
         kl = (logp_new - logp_ref).mean()
         loss = pg_loss + kl_coef * kl
+        kl_val = float(kl.detach())
         opt.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_([p for p in model.parameters() if p.requires_grad], 1.0)
-        opt.step()
-        # adapt KL coefficient toward the target (same idea as AdaptiveKLController)
-        kl_val = float(kl.detach())
-        kl_coef *= 1.1 if kl_val > 2 * args.target_kl else (0.9 if kl_val < args.target_kl / 2 else 1.0)
+        # trust-region brake: do not apply an update whose KL already exceeded the hard
+        # cap (prevents a runaway over a long run; the policy stalls rather than diverges).
+        kl_skipped = 0
+        if kl_val <= args.kl_hard_cap:
+            opt.step()
+        else:
+            kl_skipped = 1
+        opt.zero_grad()
+        # adaptive KL controller (deadband, matches the paper's "keep KL in [3,8]"): raise
+        # the coef only when KL exceeds 2x target, lower it below target/2, hold in between.
+        # A multiplicative bang-bang that reacts at >target instead ran kl_coef away to ~100
+        # and crushed the policy gradient; the deadband + [min,max] clamp keeps it stable.
+        kl_coef *= 1.2 if kl_val > 2 * args.target_kl else (0.9 if kl_val < args.target_kl / 2 else 1.0)
+        if kl_skipped:
+            kl_coef *= 1.5
+        kl_coef = min(args.kl_coef_max, max(args.kl_coef_min, kl_coef))
 
         if step % args.log_every == 0:
+            # within-group reward std is the GRPO learning signal: if it collapses to ~0
+            # the policy has mode-collapsed and nothing learns. Log it to catch that.
+            group_reward_std = float(R.std(dim=1).mean().detach())
             rec = {
                 "step": step, "reward_mean": float(rewards.mean()),
+                "reward_group_std": group_reward_std,
                 "hard_violation_rate": float((viols > 0).mean()),
-                "kl": kl_val, "loss": float(loss.item()), "kl_coef": kl_coef,
+                "kl": kl_val, "kl_skipped": kl_skipped,
+                "loss": float(loss.item()), "kl_coef": kl_coef,
             }
             print(json.dumps(rec), flush=True)
             (out_dir / "metrics.jsonl").open("a").write(json.dumps(rec) + "\n")
+        if args.log_completions and step % args.log_completions == 0:
+            sample = [texts[0][:200], texts[1][:200]] if len(texts) > 1 else [texts[0][:200]]
+            print(json.dumps({"step": step, "sample_completions": sample}), flush=True)
 
     model.save_pretrained(str(out_dir / "lora_adapter"))
     print(f"saved LoRA adapter to {out_dir / 'lora_adapter'}", flush=True)

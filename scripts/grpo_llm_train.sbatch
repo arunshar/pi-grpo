@@ -58,6 +58,7 @@ BATCH_PROMPTS="${PIGRPO_BATCH_PROMPTS:-8}"
 GROUP_SIZE="${PIGRPO_GROUP_SIZE:-8}"
 SEED="${PIGRPO_SEED:-42}"
 OUT_DIR="${PIGRPO_OUT_DIR:-${REPO_ROOT}/runs/llm_grpo}"
+LOG_COMPLETIONS="${PIGRPO_LOG_COMPLETIONS:-0}"
 
 # ----------------------------------------------------------------- preflight
 echo "[exp5] preflight on $(hostname) for repo=${REPO_ROOT}"
@@ -92,7 +93,7 @@ fi
 export HF_HOME PYTHONPATH="${REPO_ROOT}:${PYTHONPATH:-}"
 COMMON_ARGS=( --algo "${ALGO}" --base-model "${MODEL}" --steps "${STEPS}" \
               --batch-prompts "${BATCH_PROMPTS}" --group-size "${GROUP_SIZE}" \
-              --seed "${SEED}" --out-dir "${OUT_DIR}" )
+              --seed "${SEED}" --out-dir "${OUT_DIR}" --log-completions "${LOG_COMPLETIONS}" )
 [ "${ALGO}" = "dpo" ] && COMMON_ARGS+=( --preferences "${PREFS}" )
 
 if [ "${PIGRPO_USE_VLLM:-0}" = "1" ]; then
