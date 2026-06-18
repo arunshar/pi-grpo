@@ -30,3 +30,8 @@ paper/*.fdb_latexmk
 paper/*.synctex.gz
 paper/arxiv-build/
 paper/*-arxiv.tar.gz
+
+# Slurm job logs (written to the submit dir = repo root) and CI scratch
+pigrpo*.out
+pigrpo*.err
+pigrpo_ci_test2.sh

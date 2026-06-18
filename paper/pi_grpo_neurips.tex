@@ -490,6 +490,50 @@ The repository includes input guards, content filters, and output filters around
 \textbf{Setup.} The target full-scale configuration is \texttt{Qwen2-7B-Instruct} \citep{qwen2024qwen2} as both policy and frozen reference, fine-tuned on 11k preference triples from a 30-day GeoTrace-Agent HITL export ($\sim$8k natural HITL labels and $\sim$3k synthesized via the curator's $K\!=\!8$ rollout-and-rank), on 1$\times$H100 80GB for training with 1$\times$H100 hosting vLLM with prefix caching; that run is in progress. The results reported in this section are the CPU-reproducible checks that gate it: a property and unit suite, a measured reward-level reward-hacking probe, hot-path microbenchmarks, and the two-item golden evaluator. Trained-policy violation rates (Table~\ref{tab:expected-trends}) remain diagnostic targets until that run completes.
 
 \smallskip
+\textbf{Measured vs.\ target.} Every number in this section is labeled either \emph{measured} (produced by a repository script, reproducible on CPU) or a \emph{diagnostic target} (the direction a correct full-scale run should follow, not yet observed). The reward-actor scaling and its $B\!\cdot\!K$ crossover (Tables~\ref{tab:scaling}~and~\ref{tab:crossover}), the reward-hacking probe (Table~\ref{tab:hack}), the repository checks (Table~\ref{tab:repo-checks}), and the microbenchmarks are measured; the trend table (Table~\ref{tab:expected-trends}) and the ablation matrix (Table~\ref{tab:ablation-matrix}) are diagnostic targets pending the in-progress run.
+
+\subsection{Reward-eval parallelism and its crossover (measured)}
+\label{sec:scaling}
+The score step is a serial $B\!\times\!K$ reward loop over trajectories and is the only training stage that is both CPU-bound and embarrassingly parallel, so it is the natural target for distribution. We run it over a Ray reward-actor pool (\texttt{app/policy/ray\_reward\_pool.py}) and measure strong scaling, sweeping the actor count $W$. Two regimes emerge. At a small, fixed run shape ($B=8$, $K=8$, horizon $12$, 10 steps; $B\!\cdot\!K=64$ trajectories per step) the pool anti-scales: $W=16$ is about $79\times$ slower than serial (Table~\ref{tab:scaling}). But the deficit shrinks as $B\!\cdot\!K$ grows, and the pool crosses over to a net win at $B\!\cdot\!K=512$ (Table~\ref{tab:crossover}).
+
+\begin{table}[t]
+\centering
+\caption{Reward-actor pool strong scaling on the GRPO score step (measured, CPU, one \texttt{agsmall} node) at a fixed shape $B=8$, $K=8$, horizon $12$, 10 steps ($B\!\cdot\!K=64$ trajectories per step). The pool anti-scales here: reward-eval time grows with $W$. The per-step decomposition (\texttt{paper/results/step\_decomposition.csv}) shows the cost is a one-time actor cold start, not per-step dispatch. Data: \texttt{paper/results/scaling\_results.csv}; analysis: \texttt{docs/RAY\_GRPO\_RESULTS.md}.}
+\label{tab:scaling}
+\begin{tabular}{rrrr}
+\toprule
+$W$ (reward actors) & reward eval (s) & throughput (traj/s) & speedup vs.\ $W{=}1$ \\
+\midrule
+1  & $0.278$  & $2298.6$ & $1.00\times$ \\
+2  & $2.786$  & $229.8$  & $0.100\times$ \\
+4  & $6.350$  & $100.8$  & $0.044\times$ \\
+8  & $11.680$ & $54.8$   & $0.024\times$ \\
+16 & $21.911$ & $29.2$   & $0.013\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The per-step decomposition explains the curve and converts it into a systems statement. The entire penalty falls in step $0$ and grows about linearly with $W$ (roughly $1.4$\,s per actor): it is the one-time cost of starting $W$ workers and importing torch in each forked worker. The warm steps, by contrast, do parallelize: the mean warm-step reward time falls from $0.028$\,s (serial) to $0.009$\,s at $W=16$, a $3\times$ speedup. The pool therefore works; it is the fixed cold start that goes unamortized when $B\!\cdot\!K$ is tiny, because a warm step at $B\!\cdot\!K=64$ is already so cheap ($\sim$$0.01$\,s) that no realistic step count repays an $11$ to $22$\,s startup.
+
+\begin{table}[t]
+\centering
+\caption{Crossover of the reward-actor pool as $B\!\cdot\!K$ grows (measured, CPU; horizon $24$, 8 steps; best $W>1$ against the serial baseline). The deficit shrinks monotonically and the pool overtakes serial at $B\!\cdot\!K=512$. Data: \texttt{paper/results/crossover\_bk.csv}.}
+\label{tab:crossover}
+\begin{tabular}{rrcr}
+\toprule
+$B\!\cdot\!K$ & serial (traj/s) & best $W>1$ & speedup vs.\ $W{=}1$ \\
+\midrule
+16  & $1943.6$ & $W{=}2$ & $0.026\times$ \\
+64  & $2078.5$ & $W{=}2$ & $0.099\times$ \\
+256 & $2373.5$ & $W{=}2$ & $0.49\times$  \\
+512 & $2565.6$ & $W{=}2$ & $\mathbf{1.12\times}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:crossover} is the systems result. The amortization condition is that the warm per-step parallel saving, summed over the run, exceed the fixed per-actor cold start, which favors a heavy score step. As $B\!\cdot\!K$ rises from $16$ to $512$ the best $W>1$ speedup climbs $0.026 \to 0.099 \to 0.49 \to 1.12$, and at $B\!\cdot\!K=512$ the pool ($W=2$, $2860$ traj/s) beats the serial path ($2566$ traj/s) despite paying the cold start. $W=4$ and $W=8$ do not yet win at $8$ steps because their larger cold starts are not repaid over so few steps; the crossover point is set by the ratio of warm per-step saving to per-actor startup. The complementary heavy-per-item-reward crossover (fixed $B\!\cdot\!K$, an upweighted Pi-DPM term) is the obvious next measurement and is marked to-measure.
+
+\smallskip
 \textbf{Golden-dataset evaluator.} The CPU-friendly evaluator \texttt{evaluation/offline\_eval.py} ships two synthetic items: a clean trajectory (\texttt{p-001}, expected verdict \textsc{pass}) and a speeding trajectory (\texttt{p-002}, expected \textsc{hard\_violation}). The reward decomposition matches expectations: $R_{\text{hard}}=-8.66$ on \texttt{p-002} and $R_{\text{hard}} = 0$ on \texttt{p-001}, and the reasoner's verdict labeling is correct on both ($2/2$). This is a smoke test, not a benchmark: it guards the trajectory parser and the reward signs, not generalization.
 
 \smallskip
