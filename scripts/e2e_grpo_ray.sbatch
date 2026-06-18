@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=pigrpo-e2e
+#SBATCH --account=shekhars
 #SBATCH --partition=agsmall
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -44,10 +45,18 @@ HORIZON="${PIGRPO_HORIZON:-10}"
 SEED="${PIGRPO_SEED:-0}"
 
 # ----------------------------------------------------------------- paths
-# Resolve the repo root from this script's own location so the job runs from
-# anywhere. The repo gets bound into the container and put on PYTHONPATH.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# Resolve the repo root. Under sbatch the script is COPIED to a spool dir, so
+# BASH_SOURCE does NOT point at the repo; prefer an explicit override, then the
+# submit dir (sbatch is launched from the repo root), then the script-location
+# heuristic for a direct `bash scripts/e2e_grpo_ray.sbatch` invocation.
+if [ -n "${PIGRPO_REPO:-}" ]; then
+  REPO_ROOT="${PIGRPO_REPO}"
+elif [ -n "${SLURM_SUBMIT_DIR:-}" ] && [ -f "${SLURM_SUBMIT_DIR}/scripts/e2e_grpo_ray.py" ]; then
+  REPO_ROOT="${SLURM_SUBMIT_DIR}"
+else
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+fi
 
 SIF="${PIGRPO_SIF:-/scratch.global/${USER}/mirror_pnemo.sif}"
 

@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=pigrpo-scale
+#SBATCH --account=shekhars
 #SBATCH --partition=agsmall
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -34,10 +35,19 @@ HORIZON="${PIGRPO_HORIZON:-12}"
 SEED="${PIGRPO_SEED:-42}"
 
 # ----------------------------------------------------------------- paths
-# Resolve the repo root from this script's location so the job is runnable from
-# anywhere (sbatch records the submit-dir, but we want the script's own tree).
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# Resolve the repo root. Under sbatch the script is COPIED to a spool dir
+# (/var/spool/slurmd/...), so BASH_SOURCE does NOT point at the repo tree. Prefer
+# an explicit override, then the submit dir (sbatch is launched from the repo
+# root), then fall back to the script-location heuristic for a direct
+# `bash scripts/grpo_ray_slurm.sbatch` invocation.
+if [ -n "${PIGRPO_REPO:-}" ]; then
+  REPO_ROOT="${PIGRPO_REPO}"
+elif [ -n "${SLURM_SUBMIT_DIR:-}" ] && [ -f "${SLURM_SUBMIT_DIR}/scripts/grpo_scale.py" ]; then
+  REPO_ROOT="${SLURM_SUBMIT_DIR}"
+else
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+fi
 
 JOB_ID="${SLURM_JOB_ID:-local-$(date +%s)}"
 SCRATCH_BASE="/scratch.global/${USER}/pigrpo"
