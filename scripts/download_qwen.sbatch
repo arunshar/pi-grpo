@@ -28,7 +28,9 @@ if [ ! -f "${SIF}" ]; then
 fi
 
 echo "[dl] node=$(hostname) model=${MODEL} -> ${HF_HOME}"
-apptainer exec --bind /scratch.global:/scratch.global "${SIF}" \
+# Pass HF_HOME via --env (it overrides the image's %environment, which otherwise
+# bakes an empty-$USER path and lands the model in /scratch.global/hf_cache).
+apptainer exec --env HF_HOME="${HF_HOME}" --bind /scratch.global:/scratch.global "${SIF}" \
   python3 -c "from huggingface_hub import snapshot_download; p=snapshot_download('${MODEL}'); print('downloaded to', p)"
 RC=$?
 echo "[dl] exit=${RC}"

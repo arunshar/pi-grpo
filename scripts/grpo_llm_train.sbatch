@@ -63,7 +63,7 @@ if [ -f "${SIF}" ]; then
   fi
 fi
 [ -d "${HF_HOME}" ] && ok "HF cache ${HF_HOME}" || note "HF cache ${HF_HOME} (mkdir -p and pre-download ${MODEL})"
-[ -f "${TRAINER}" ] && ok "trainer entrypoint ${TRAINER}" || note "trainer entrypoint scripts/grpo_llm_train.py (NOT IMPLEMENTED: needs the Qwen2-7B+LoRA GRPO loop, vLLM rollout generator, and the LLM-output -> trajectory decode for the physics reward; see docs/EXP5_LLM_SCALE.md)"
+[ -f "${TRAINER}" ] && ok "trainer entrypoint ${TRAINER}" || note "trainer entrypoint scripts/grpo_llm_train.py not found (see docs/EXP5_LLM_SCALE.md)"
 [ -f "${PREFS}" ] && ok "preference triples ${PREFS}" || note "preference triples ${PREFS} (export from GeoTrace-Agent HITL)"
 nvidia-smi -L 2>/dev/null | grep -qi h100 && ok "H100 visible" || note "no H100 visible on this allocation"
 
@@ -77,7 +77,7 @@ fi
 export HF_HOME PYTHONPATH="${REPO_ROOT}:${PYTHONPATH:-}"
 echo "[exp5] launching ${ALGO} run: model=${MODEL} on $(nvidia-smi -L | wc -l) GPUs"
 # GPU 1 -> vLLM rollout server (prefix caching); GPU 0 -> LoRA trainer.
-apptainer exec --nv --bind /scratch.global:/scratch.global --bind "${REPO_ROOT}:${REPO_ROOT}" "${SIF}" \
+apptainer exec --nv --env HF_HOME="${HF_HOME}" --bind /scratch.global:/scratch.global --bind "${REPO_ROOT}:${REPO_ROOT}" "${SIF}" \
   bash -c "CUDA_VISIBLE_DEVICES=1 python3 -m vllm.entrypoints.openai.api_server --model '${MODEL}' --enable-prefix-caching --port 8000 & \
            sleep 60; \
            CUDA_VISIBLE_DEVICES=0 python3 '${TRAINER}' --algo '${ALGO}' --base-model '${MODEL}' --vllm-url http://localhost:8000/v1 --preferences '${PREFS}'"

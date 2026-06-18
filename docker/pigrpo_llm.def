@@ -37,7 +37,9 @@ From: vllm/vllm-openai:latest
     python3 -c "import vllm, transformers, peft, accelerate, ray; print('llm stack OK')"
 
 %environment
-    export HF_HOME=/scratch.global/${USER}/hf_cache
+    # HF_HOME is intentionally NOT baked here: $USER is empty at container runtime,
+    # which would resolve to /scratch.global//hf_cache. Set it at run time instead
+    # (the sbatch scripts pass --env HF_HOME=..., which overrides %environment).
     export TRANSFORMERS_OFFLINE=0
     export OMP_NUM_THREADS=8
 
