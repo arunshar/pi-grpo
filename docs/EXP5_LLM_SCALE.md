@@ -39,41 +39,50 @@ matrix, and the KL-drift claim.
   launches only when all prerequisites are satisfied, so it is a readiness tool, not
   a fake.
 
-## Open code work (`scripts/grpo_llm_train.py`, to implement)
+## The trainer (`scripts/grpo_llm_train.py`, implemented, pending GPU validation)
 
-1. Load `Qwen2-7B-Instruct` as the policy with a LoRA adapter (memory: 7B + LoRA fits
-   one H100 80GB for training; the frozen reference is the base model served by vLLM).
-2. Rollout generation through the vLLM server (`--enable-prefix-caching`) rather than
-   `policy.generate`, sharding prompts (replace the `TODO(scale)` in
-   `app/policy/ray_rollout.py`).
-3. Decode the LLM output into a trajectory the physics reward can score. This is the
-   real design question: the reward operates on motion states via `MotionCodebook`;
-   the 7B path needs a defined output grammar (motion tokens, or a parseable
-   trajectory payload) so `PhysicsReward.score` + `PiDpmScorer` apply unchanged.
-4. GRPO update on the LoRA policy reusing the existing `GrpoTrainer` and the hybrid
-   reward; KL to the frozen reference; the `AdaptiveKLController` for PPO.
-5. Stream metrics for `tab:expected-trends` (hard-violation, soft-envelope,
-   pref-win-rate, KL) and the KL-drift logging.
+Implemented (structurally complete, byte-compiles; not yet run end to end because the
+container and model download are the gating steps):
 
-## Build and run sequence (when the trainer exists)
+1. Loads `Qwen2-7B-Instruct` (bf16) with a LoRA adapter (peft); the frozen reference
+   is the base model recovered by `model.disable_adapter()`, so there is one model in
+   memory, not two.
+2. The reward bridge reuses the EXISTING physics path unchanged: the policy is
+   prompted to emit a trajectory as `horizon` motion-primitive ids (the
+   `MotionCodebook` accel x steer vocabulary); `parse_motion_ids` parses the
+   completion, `tokens_to_states` rolls it through the S-KBM, and
+   `PhysicsReward.score` + `PiDpmScorer` score it. The trained-policy numbers are
+   therefore on the same reward as the CPU scaling / reward-hacking results.
+3. GRPO update: K rollouts per prompt, group-baseline advantages, clipped surrogate
+   over summed completion logprobs, KL to the frozen reference with an adaptive KL
+   coefficient. Optimizes only the LoRA parameters.
+4. Streams `metrics.jsonl` (reward mean, hard-violation rate, KL, loss) for
+   `tab:expected-trends` and the KL-drift claim.
+
+Rollouts default to Hugging Face `generate` (on-policy and correct). The vLLM path is
+the throughput optimization and is left as a hook: vLLM serves the frozen base
+weights, so on-policy LoRA rollouts need a per-step adapter sync (vLLM LoRA hot-swap),
+which is the next optimization once the correctness run is green.
+
+Still to do: validate end to end on an H100 (the parse grammar, LoRA target modules,
+and KL schedule will need tuning on real generations); add PPO/DPO (they reuse the
+same reward bridge and policy); wire the vLLM rollout backend.
+
+## Build and run sequence
 
 ```
-# 1. Build the LLM container on a compute node (internet + fakeroot):
-srun --account=shekhars --partition=msigpu --gres=gpu:h100:1 --cpus-per-task=16 --mem=64g --time=2:00:00 --pty bash
-export APPTAINER_CACHEDIR=/scratch.global/$USER/apptainer_cache
-apptainer build --fakeroot /scratch.global/$USER/pigrpo_llm.sif docker/pigrpo_llm.def
+# 1. Build the LLM container (compute node; internet + fakeroot verified by the probe):
+sbatch scripts/build_llm_container.sbatch        # -> /scratch.global/$USER/pigrpo_llm.sif + pigrpo_build/DONE
 
-# 2. Pre-download the model into the HF cache (compute node has internet):
-mkdir -p /scratch.global/$USER/hf_cache
-HF_HOME=/scratch.global/$USER/hf_cache apptainer exec /scratch.global/$USER/pigrpo_llm.sif \
-  python3 -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen2-7B-Instruct')"
+# 2. Pre-download the model (auto-runs after the build via the afterok dependency):
+sbatch --dependency=afterok:<build_jobid> scripts/download_qwen.sbatch   # -> hf_cache/
 
-# 3. Preflight (prints the checklist; exits 2 until everything is ready):
+# 3. Preflight + launch (prints a checklist; exits 2 until every prerequisite is met):
 sbatch scripts/grpo_llm_train.sbatch
 ```
 
 ## Honest status for the paper
 
-The paper now says this run is planned and the code stages but does not yet
-implement it, and points here. Do not report `tab:expected-trends`, the ablation
-deltas, or the KL-drift numbers as measured until this run is built and completed.
+The paper says this run is planned and the code stages it but has not completed it.
+Do not report `tab:expected-trends`, the ablation deltas, or the KL-drift numbers as
+measured until the GPU run is validated and completed.
