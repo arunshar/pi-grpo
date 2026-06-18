@@ -128,7 +128,7 @@ def completion_logprobs(model, input_ids, attn_mask, prompt_lens):
     targets = input_ids[:, 1:]
     logp = torch.log_softmax(logits.float(), dim=-1)
     tok_logp = logp.gather(-1, targets.unsqueeze(-1)).squeeze(-1)  # (N, L-1)
-    n, lm1 = tok_logp.shape
+    _, lm1 = tok_logp.shape
     pos = torch.arange(lm1, device=input_ids.device).unsqueeze(0)
     # completion tokens are positions >= prompt_len-1 in the shifted frame, masked by attn
     comp_mask = (pos >= (prompt_lens.unsqueeze(1) - 1)) & (attn_mask[:, 1:] > 0)
