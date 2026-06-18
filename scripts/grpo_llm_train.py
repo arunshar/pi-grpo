@@ -217,13 +217,14 @@ def main(argv=None) -> int:
         torch.nn.utils.clip_grad_norm_([p for p in model.parameters() if p.requires_grad], 1.0)
         opt.step()
         # adapt KL coefficient toward the target (same idea as AdaptiveKLController)
-        kl_coef *= 1.1 if float(kl) > 2 * args.target_kl else (0.9 if float(kl) < args.target_kl / 2 else 1.0)
+        kl_val = float(kl.detach())
+        kl_coef *= 1.1 if kl_val > 2 * args.target_kl else (0.9 if kl_val < args.target_kl / 2 else 1.0)
 
         if step % args.log_every == 0:
             rec = {
                 "step": step, "reward_mean": float(rewards.mean()),
                 "hard_violation_rate": float((viols > 0).mean()),
-                "kl": float(kl.item()), "loss": float(loss.item()), "kl_coef": kl_coef,
+                "kl": kl_val, "loss": float(loss.item()), "kl_coef": kl_coef,
             }
             print(json.dumps(rec), flush=True)
             (out_dir / "metrics.jsonl").open("a").write(json.dumps(rec) + "\n")
