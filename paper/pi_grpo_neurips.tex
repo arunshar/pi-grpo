@@ -490,7 +490,7 @@ The repository includes input guards, content filters, and output filters around
 \textbf{Setup.} The target full-scale configuration is \texttt{Qwen2-7B-Instruct} \citep{qwen2024qwen2} as both policy and frozen reference, fine-tuned on 11k preference triples from a 30-day GeoTrace-Agent HITL export ($\sim$8k natural HITL labels and $\sim$3k synthesized via the curator's $K\!=\!8$ rollout-and-rank), on 1$\times$H100 80GB for training with 1$\times$H100 hosting vLLM with prefix caching. This run is planned but not yet implemented: the repository's training entrypoint currently exercises the in-process policy of Section~\ref{sec:scaling}, and the 7B path (a Qwen2-7B policy plus a vLLM rollout generator and a capable container) is staged but unbuilt; the staging plan and prerequisites are documented in \texttt{docs/EXP5\_LLM\_SCALE.md}. The results reported in this section are therefore the CPU-reproducible evidence that the method and infrastructure are correct: a property and unit suite, a measured reward-level reward-hacking probe, a measured reward-actor scaling crossover (Section~\ref{sec:scaling}), hot-path microbenchmarks, and the two-item golden evaluator. Trained-policy violation rates (Table~\ref{tab:expected-trends}) remain diagnostic targets until that run is built and completed.
 
 \smallskip
-\textbf{Measured vs.\ target.} Every number in this section is labeled either \emph{measured} (produced by a repository script, reproducible on CPU) or a \emph{diagnostic target} (the direction a correct full-scale run should follow, not yet observed). The reward-actor scaling and its $B\!\cdot\!K$ and heavy-reward crossovers (Tables~\ref{tab:scaling}, \ref{tab:crossover}, and~\ref{tab:heavy}), the reward-hacking probe (Table~\ref{tab:hack}), the repository checks (Table~\ref{tab:repo-checks}), and the microbenchmarks are measured; the trend table (Table~\ref{tab:expected-trends}) and the ablation matrix (Table~\ref{tab:ablation-matrix}) are diagnostic targets pending the planned full-scale run.
+\textbf{Measured vs.\ target.} Every number in this section is labeled either \emph{measured} (produced by a repository script, reproducible on CPU) or a \emph{diagnostic target} (the direction a correct full-scale run should follow, not yet observed). The reward-actor scaling and its $B\!\cdot\!K$ and heavy-reward crossovers (Tables~\ref{tab:scaling}, \ref{tab:crossover}, and~\ref{tab:heavy}), the asynchronous staleness sweep (Table~\ref{tab:r2}), the reward-hacking probe (Table~\ref{tab:hack}), the repository checks (Table~\ref{tab:repo-checks}), and the microbenchmarks are measured; the trend table (Table~\ref{tab:expected-trends}) and the ablation matrix (Table~\ref{tab:ablation-matrix}) are diagnostic targets pending the planned full-scale run.
 
 \subsection{Reward-eval parallelism and its crossover (measured)}
 \label{sec:scaling}
@@ -551,6 +551,31 @@ reward cost $r$ & serial (traj/s) & best $W>1$ & speedup vs.\ $W{=}1$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\subsection{Asynchronous off-policy staleness and its knee (measured)}
+\label{sec:staleness}
+The reward-actor pool of Section~\ref{sec:scaling} parallelizes a synchronous step; the complementary systems axis is asynchrony, where rollout production is decoupled from the policy update through a replay queue with a maximum-staleness bound $s$ (a sample produced more than $s$ policy versions ago is evicted rather than consumed). Asynchrony trades on-policyness for overlap, so the design question is how much staleness the optimizer tolerates before reward or stability degrade. We sweep $s\in\{0,1,2,4,8\}$ on the in-process policy ($B=8$, $K=8$, horizon $12$, 60 consumed steps) and measure jointly the mean producer/consumer lag, the on-policy fraction, the mean KL between the behavior and target policy versions, the final reward relative to the synchronous $s{=}0$ baseline, and the consumer throughput (Table~\ref{tab:r2}); \texttt{scripts/grpo\_staleness\_sweep.py} wraps \texttt{app/policy/ray\_staleness.py} and reproduces it on CPU.
+
+\begin{table}[t]
+\centering
+\caption{Asynchronous off-policy staleness sweep on the GRPO consumer (measured, CPU, one \texttt{agsmall} node) at $B=8$, $K=8$, horizon $12$, 60 consumed steps, sweeping the replay-queue maximum-staleness bound $s$. As $s$ grows the mean producer/consumer lag rises and the on-policy fraction collapses, yet the final reward is unchanged (the reward gap vs.\ $s{=}0$ is $0$ at every $s$) and the mean KL does not inflate. Throughput falls with $s$ because this is a single-process queue simulation rather than true producer/consumer overlap, so it is a systems demo of the queue mechanics, not a speedup. Data: \texttt{paper/results/staleness\_sweep.csv}.}
+\label{tab:r2}
+\begin{tabular}{rrrrrr}
+\toprule
+$s$ (max staleness) & mean lag & on-policy frac. & mean KL & reward gap vs.\ $s{=}0$ & throughput (steps/s) \\
+\midrule
+0 & $0.00$ & $1.000$ & $1.970$ & $0.000$ & $15.88$ \\
+1 & $0.50$ & $0.500$ & $1.871$ & $0.000$ & $9.80$  \\
+2 & $1.47$ & $0.017$ & $1.860$ & $0.000$ & $9.80$  \\
+4 & $1.47$ & $0.017$ & $1.860$ & $0.000$ & $9.80$  \\
+8 & $1.47$ & $0.017$ & $1.860$ & $0.000$ & $9.81$  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The queue behaves as designed: mean lag climbs from $0$ (synchronous) to $0.5$ at $s{=}1$ and saturates near $1.47$ for $s\ge2$, while the on-policy fraction collapses from $1.00$ to $0.50$ to $\sim$$0.017$. By $s{=}2$, under $2\%$ of gradient steps consume a sample generated by the current policy version, so training is almost entirely off-policy. Despite that, the final reward is invariant: the reward gap versus the synchronous baseline is $0.000$ at every $s$ (all runs converge to the same level, reward rising from $-311.5$ to $\approx 0$), and the mean KL does not inflate with staleness; it is flat-to-slightly-lower ($1.970 \to 1.860$), consistent with staler, more-averaged updates being marginally smoother here rather than more divergent. The knee $s^{*}$, defined as the largest staleness whose reward stays within tolerance of $s{=}0$, is therefore the top of the sweep, $s^{*}{=}8$. This is a methodological result rather than a tuned operating point: the in-process task is easy enough that no swept staleness degrades reward, so $s^{*}$ confirms the harness can locate the knee while signaling that a harder task (the planned 7B path) would move it inward.
+
+One number must be read carefully. Throughput \emph{drops} from $15.88$ steps/s at $s{=}0$ to $\sim$$9.80$ for $s\ge1$, the opposite of the wall-clock win asynchrony is meant to buy. This is expected and honest: the sweep simulates staleness inside a single process with a replay queue rather than overlapping a producer and a consumer on separate devices, so the extra samples the queue admits and evicts ($60\to120$ admitted, $0\to\sim$$57$ evicted) are pure bookkeeping overhead with no parallel producer to hide behind. The throughput column is thus a systems demo of the queue mechanics, not a speedup claim; a real asynchronous deployment runs a vLLM rollout producer and the trainer on distinct GPUs, and the staleness/KL/reward trade measured here, not this throughput, is the transferable signal for choosing $s$ in that setting.
 
 \smallskip
 \textbf{Golden-dataset evaluator.} The CPU-friendly evaluator \texttt{evaluation/offline\_eval.py} ships two synthetic items: a clean trajectory (\texttt{p-001}, expected verdict \textsc{pass}) and a speeding trajectory (\texttt{p-002}, expected \textsc{hard\_violation}). The reward decomposition matches expectations: $R_{\text{hard}}=-8.66$ on \texttt{p-002} and $R_{\text{hard}} = 0$ on \texttt{p-001}, and the reasoner's verdict labeling is correct on both ($2/2$). This is a smoke test, not a benchmark: it guards the trajectory parser and the reward signs, not generalization.
