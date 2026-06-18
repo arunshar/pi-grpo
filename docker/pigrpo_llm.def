@@ -34,7 +34,7 @@ From: vllm/vllm-openai:latest
     # pi-grpo runtime deps (the repo itself is bind-mounted at run time, not baked in)
     pip install --no-cache-dir \
         pydantic pydantic-settings structlog httpx numpy shapely pyyaml
-    python -c "import vllm, transformers, peft, accelerate, ray; print('llm stack OK')"
+    python3 -c "import vllm, transformers, peft, accelerate, ray; print('llm stack OK')"
 
 %environment
     export HF_HOME=/scratch.global/${USER}/hf_cache
