@@ -73,17 +73,40 @@ beating the serial path despite paying the cold start. W=4 and W=8 do not yet wi
 over so few steps; with more steps or larger B*K their crossover follows by the same
 arithmetic.
 
+## Table R3: the heavy-reward crossover (measured)
+
+The other way to make the score step heavy is to raise the per-item reward cost
+rather than B*K. The Pi-DPM scorer is the expensive term in production (a diffusion
+forward pass); in the CPU proxy it is cheap, so we scale it with `reward_repeats`
+(r evaluations of the deterministic score pass; the reward value is unchanged, only
+the cost scales). Holding B*K = 64 fixed (horizon 12, 8 steps), the same shape where
+the B*K sweep showed no crossover, and sweeping r:
+
+| reward_repeats r | serial (traj/s) | best W>1 | best speedup |
+|---:|---:|:---:|---:|
+| 1   | 2087.0 | W=2 | 0.086x |
+| 10  | 702.8  | W=2 | 0.256x |
+| 50  | 224.4  | W=2 | 0.528x |
+| 100 | 132.7  | W=2 | 0.925x |
+| 200 | 69.2   | W=2 | 1.277x |
+
+The best W>1 speedup climbs monotonically with per-item cost and the pool CROSSES
+OVER at r = 200 (W=2: reward eval 5.79 s vs the serial 7.40 s). So heavy per-item
+reward induces the crossover even at the small B*K where a cheap reward anti-scales.
+Data: `paper/results/heavy_reward_bk64.csv`.
+
 ## Conclusion (the contribution)
 
-The reward-actor pool is a net loss at small B*K with a cheap reward and a net win
-once B*K is large enough that the warm per-step parallel saving, summed over the
-run, exceeds the fixed per-actor cold start. We locate that crossover: it occurs at
-B*K = 512 with W=2 in this configuration. The deliverable is therefore not "Ray
-makes GRPO faster" but the characterization: the pool helps exactly when the score
-step is heavy (large B*K, or, untested here, an expensive per-item reward such as an
-upweighted Pi-DPM term), and the crossover point is set by the ratio of warm
-per-step saving to per-actor startup cost. A heavy-per-item-reward crossover (fixed
-B*K, expensive reward) remains to-measure and is the obvious complement.
+The reward-actor pool is a net loss when the score step is light and a net win once
+it is heavy enough that the warm per-step parallel saving, summed over the run,
+exceeds the fixed per-actor cold start. "Heavy" has two independent axes and we
+locate the crossover on both: by trajectory count, B*K = 512 (W=2); and by per-item
+reward cost, r = 200 at B*K = 64 (W=2). The deliverable is not "Ray makes GRPO
+faster" but the characterization: the pool helps exactly when the score step is
+heavy, and the crossover point on either axis is set by the ratio of warm per-step
+saving to per-actor startup cost. A production reward with a real (expensive) Pi-DPM
+diffusion scorer sits in the heavy regime, so the pool is expected to pay off there
+without the synthetic cost knob.
 
 ## Reproduce
 
