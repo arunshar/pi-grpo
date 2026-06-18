@@ -35,3 +35,6 @@ paper/*-arxiv.tar.gz
 pigrpo*.out
 pigrpo*.err
 pigrpo_ci_test2.sh
+# catch-all for Slurm logs from any future job name (no .out/.err is source here)
+*.out
+*.err
