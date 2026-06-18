@@ -1,0 +1,46 @@
+Bootstrap: docker
+From: vllm/vllm-openai:latest
+
+# Apptainer recipe for the EXP-5 LLM-scale GRPO container (Qwen2-7B + vLLM).
+#
+# The CPU experiments (the reward-actor scaling sweep, the reward-hacking probe,
+# the unit suite) do NOT need this image; they run in the miniforge `pcrf` env or
+# docker/Dockerfile.cpu. This image is ONLY for the planned full-scale run, which
+# the existing mirror_pnemo.sif cannot serve (it has torch + apex + flash_attn but
+# no vllm/transformers/accelerate/peft/ray).
+#
+# Base choice: vllm/vllm-openai already pins a matching torch + vllm + transformers
+# trio, which avoids the torch-version reconciliation that biting an NVIDIA PyTorch
+# base would require. The first build on a compute node will still likely need one
+# pin adjustment; treat the versions below as a starting point, not a frozen lock.
+#
+# Build (on an MSI compute node, which has outbound internet; the login node does
+# not, and apptainer build needs --fakeroot):
+#   srun --account=shekhars --partition=msigpu --gres=gpu:h100:1 \
+#        --cpus-per-task=16 --mem=64g --time=2:00:00 --pty bash
+#   export APPTAINER_CACHEDIR=/scratch.global/$USER/apptainer_cache
+#   apptainer build --fakeroot /scratch.global/$USER/pigrpo_llm.sif docker/pigrpo_llm.def
+
+%post
+    set -eux
+    pip install --no-cache-dir \
+        "transformers>=4.44" \
+        "accelerate>=0.34" \
+        "peft>=0.13" \
+        "trl>=0.11" \
+        "datasets>=2.20" \
+        "ray[default]>=2.40" \
+        "huggingface_hub>=0.25"
+    # pi-grpo runtime deps (the repo itself is bind-mounted at run time, not baked in)
+    pip install --no-cache-dir \
+        pydantic pydantic-settings structlog httpx numpy shapely pyyaml
+    python -c "import vllm, transformers, peft, accelerate, ray; print('llm stack OK')"
+
+%environment
+    export HF_HOME=/scratch.global/${USER}/hf_cache
+    export TRANSFORMERS_OFFLINE=0
+    export OMP_NUM_THREADS=8
+
+%labels
+    Purpose pi-grpo EXP-5 LLM-scale GRPO (Qwen2-7B-Instruct + vLLM)
+    Note    CPU experiments do not use this image; see docs/EXP5_LLM_SCALE.md
