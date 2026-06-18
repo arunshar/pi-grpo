@@ -47,6 +47,7 @@ class TrainConfig:
     n_layers: int = 2
     n_heads: int = 4
     codebook: CodebookConfig = field(default_factory=CodebookConfig)
+    reward_repeats: int = 1         # per-item reward-cost knob for the EXP-3 crossover
 
 
 # A fast preset for the API path / smoke runs (must finish well under ~2 s on CPU).
@@ -69,7 +70,7 @@ def _reward_path(cfg: TrainConfig) -> tuple[MotionCodebook, PhysicsReward, PiDpm
     skbm = SkbmConfig()
     codebook = MotionCodebook(skbm, cfg.codebook)
     reward = PhysicsReward(skbm, weights=RewardWeights(), envelope=EmpiricalEnvelope())
-    scorer = PiDpmScorer(device="cpu")     # analytic proxy when no checkpoint
+    scorer = PiDpmScorer(device="cpu", cost_repeats=cfg.reward_repeats)  # analytic proxy when no checkpoint
     return codebook, reward, scorer
 
 

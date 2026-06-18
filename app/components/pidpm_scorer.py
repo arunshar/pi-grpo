@@ -28,10 +28,22 @@ log = structlog.get_logger(__name__)
 
 
 class PiDpmScorer:
-    def __init__(self, checkpoint_path: str | None = None, device: str = "cuda") -> None:
+    def __init__(
+        self,
+        checkpoint_path: str | None = None,
+        device: str = "cuda",
+        cost_repeats: int = 1,
+    ) -> None:
         self.device = device if torch.cuda.is_available() or device == "cpu" else "cpu"
         self.model = None            # real PiDPM
         self.module = None           # legacy torchscript module
+        # cost_repeats > 1 evaluates the score pass that many times per call. It
+        # exists only to characterize the reward-actor pool crossover (EXP-3):
+        # the scorer is deterministic, so the mean over r passes equals the
+        # single-pass value (the returned reward is unchanged), while the per-item
+        # compute cost scales r-fold, modeling an expensive reward such as a
+        # multi-pass diffusion scorer. cost_repeats == 1 is the normal path.
+        self.cost_repeats = max(1, int(cost_repeats))
         if checkpoint_path and Path(checkpoint_path).exists():
             self._load(checkpoint_path)
 
@@ -54,6 +66,14 @@ class PiDpmScorer:
     def log_prob(self, trajectory: np.ndarray) -> float:
         """Returns log p(trajectory). Negative reconstruction/physics error -> higher reward."""
 
+        if self.cost_repeats == 1:
+            return self._log_prob_once(trajectory)
+        # Repeat the (deterministic) score pass to model an expensive per-item
+        # reward; the mean equals the single-pass value, only the cost scales.
+        vals = [self._log_prob_once(trajectory) for _ in range(self.cost_repeats)]
+        return float(sum(vals) / len(vals))
+
+    def _log_prob_once(self, trajectory: np.ndarray) -> float:
         if self.model is not None:
             return self.model.log_prob(trajectory)
         if self.module is not None:

@@ -98,7 +98,9 @@ class _SerialRewardPool:
         return _reward_matrix(rollouts, codebook, reward, scorer)
 
 
-def default_reward_pool(num_workers: int | None = None) -> RewardPool:
+def default_reward_pool(
+    num_workers: int | None = None, reward_repeats: int = 1
+) -> RewardPool:
     """Build the production Ray reward pool, falling back to the serial stub.
 
     The Ray pool lives in a sibling module (`app.policy.ray_reward_pool`). It is
@@ -106,11 +108,16 @@ def default_reward_pool(num_workers: int | None = None) -> RewardPool:
     itself is absent (e.g. on the CPU-only login node), in which case we degrade
     to the serial pool. This keeps `train_grpo_ray` runnable everywhere while
     still defaulting to the parallel path when the cluster is present.
+
+    ``reward_repeats`` is the per-item reward-cost knob (EXP-3). For the parallel
+    pool it is baked into the actors' RewardPathSpec; the serial fallback gets it
+    via the cfg-built scorer that `train_grpo_ray` passes to score_rollouts, so
+    the two paths apply the same per-item cost.
     """
     try:
         # Imported lazily and by name to avoid a hard import-time dependency on
         # the sibling task's module or on Ray being installed.
-        from app.policy.ray_reward_pool import RayRewardPool  # type: ignore[attr-defined]
+        from app.policy.ray_reward_pool import RayRewardPool, RewardPathSpec  # type: ignore[attr-defined]
     except Exception:
         # No Ray / sibling module yet: the serial pool is correct, just serial.
         return _SerialRewardPool()
@@ -119,7 +126,8 @@ def default_reward_pool(num_workers: int | None = None) -> RewardPool:
     # building a 1-actor pool (this also avoids int(None) in RayRewardPool).
     if not num_workers or num_workers <= 1:
         return _SerialRewardPool()
-    return RayRewardPool(n_actors=num_workers)
+    spec = RewardPathSpec(pidpm_cost_repeats=int(reward_repeats))
+    return RayRewardPool(n_actors=num_workers, spec=spec)
 
 
 # ----------------------------------------------------------------------- GRPO (Ray)

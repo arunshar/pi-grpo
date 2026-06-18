@@ -281,3 +281,22 @@ def test_live_pool_matches_serial(ray_cluster) -> None:  # pragma: no cover - ne
         assert torch.equal(viol, viol_ref)
     finally:
         pool.close()
+
+
+def test_cost_repeats_preserves_reward_value() -> None:
+    """EXP-3 per-item cost knob must change cost, not the reward value.
+
+    The analytic Pi-DPM proxy is deterministic, so scoring a trajectory r times and
+    averaging equals the single-pass value. A reward-actor scaling sweep run at
+    reward_repeats>1 (to make the score step heavy and provoke the pool crossover)
+    must therefore yield the same (B, K) rewards as at repeats=1, only slower. If
+    this drifts, the heavy-reward sweep would be comparing different rewards.
+    """
+    rollouts = _make_rollouts(b=3, k=4, t=6, seed=99)
+    cb1, r1, s1 = RewardPathSpec(pidpm_cost_repeats=1).build()
+    cb3, r3, s3 = RewardPathSpec(pidpm_cost_repeats=3).build()
+    assert s1.cost_repeats == 1 and s3.cost_repeats == 3
+    rew1, viol1 = _reward_matrix(rollouts, cb1, r1, s1)
+    rew3, viol3 = _reward_matrix(rollouts, cb3, r3, s3)
+    assert torch.equal(rew1, rew3)
+    assert torch.equal(viol1, viol3)

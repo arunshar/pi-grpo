@@ -33,6 +33,7 @@ BATCH_PROMPTS="${PIGRPO_BATCH_PROMPTS:-8}"
 GROUP_SIZE="${PIGRPO_GROUP_SIZE:-8}"
 HORIZON="${PIGRPO_HORIZON:-12}"
 SEED="${PIGRPO_SEED:-42}"
+REWARD_REPEATS="${PIGRPO_REWARD_REPEATS:-1}"   # per-item reward-cost knob (EXP-3)
 
 # ----------------------------------------------------------------- paths
 # Resolve the repo root. Under sbatch the script is COPIED to a spool dir
@@ -87,7 +88,7 @@ PYBIN="${PIGRPO_PYTHON:-python3}"
 echo "[grpo-scale] job=${JOB_ID} node=$(hostname) cpus=${NCPU}"
 echo "[grpo-scale] repo=${REPO_ROOT}"
 echo "[grpo-scale] out=${OUT_DIR}"
-echo "[grpo-scale] W=${ACTOR_COUNTS} steps=${STEPS} B=${BATCH_PROMPTS} K=${GROUP_SIZE} T=${HORIZON}"
+echo "[grpo-scale] W=${ACTOR_COUNTS} steps=${STEPS} B=${BATCH_PROMPTS} K=${GROUP_SIZE} T=${HORIZON} R=${REWARD_REPEATS}"
 
 # ----------------------------------------------------------------- run
 # On any failure we still write a FAILED marker so a downstream dependency can
@@ -99,6 +100,7 @@ set +e
   --batch-prompts "${BATCH_PROMPTS}" \
   --group-size "${GROUP_SIZE}" \
   --horizon "${HORIZON}" \
+  --reward-repeats "${REWARD_REPEATS}" \
   --seed "${SEED}" \
   --out-dir "${OUT_DIR}" \
   > "${SUMMARY}" 2>&1

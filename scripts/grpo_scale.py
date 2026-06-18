@@ -55,6 +55,7 @@ SCALING_COLUMNS: tuple[str, ...] = (
     "batch_prompts",          # B
     "group_size",             # K
     "horizon",                # T_r (control tokens per rollout)
+    "reward_repeats",         # per-item reward-cost knob (EXP-3); 1 = normal
     "n_trajectories",         # total trajectories scored across the run = B*K*steps
     "reward_eval_seconds",    # summed reward-eval wall time across the run
     "throughput_traj_per_s",  # n_trajectories / reward_eval_seconds
@@ -102,6 +103,7 @@ class SweepConfig:
     group_size: int = 8
     horizon: int = 12
     seed: int = 42
+    reward_repeats: int = 1   # per-item reward-cost knob (EXP-3 heavy-reward crossover)
     out_dir: Path = field(default_factory=lambda: Path("scaling_out"))
 
 
@@ -226,6 +228,7 @@ def build_scaling_row(
         "batch_prompts": int(cfg.batch_prompts),
         "group_size": int(cfg.group_size),
         "horizon": int(cfg.horizon),
+        "reward_repeats": int(cfg.reward_repeats),
         "n_trajectories": n_traj,
         "reward_eval_seconds": reward_seconds,
         "throughput_traj_per_s": throughput,
@@ -312,6 +315,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     ap.add_argument("--batch-prompts", type=int, default=8, help="B prompts per step (default: 8)")
     ap.add_argument("--group-size", type=int, default=8, help="K rollouts per prompt (default: 8)")
     ap.add_argument("--horizon", type=int, default=12, help="control tokens per rollout (default: 12)")
+    ap.add_argument("--reward-repeats", type=int, default=1,
+                    help="per-item reward-cost multiplier for the EXP-3 crossover (default: 1)")
     ap.add_argument("--seed", type=int, default=42, help="RNG seed (default: 42)")
     ap.add_argument(
         "--out-dir",
@@ -346,6 +351,7 @@ def config_from_args(args: argparse.Namespace) -> SweepConfig:
         group_size=args.group_size,
         horizon=args.horizon,
         seed=args.seed,
+        reward_repeats=args.reward_repeats,
         out_dir=Path(args.out_dir),
     )
 
@@ -385,8 +391,14 @@ def _run_one(num_reward_actors: int, cfg: SweepConfig) -> list[dict[str, float]]
         group_size=cfg.group_size,
         horizon=cfg.horizon,
         seed=cfg.seed,
+        reward_repeats=cfg.reward_repeats,
     )
-    pool = default_reward_pool(num_workers=num_reward_actors)
+    # reward_repeats reaches the serial fallback via cfg_obj (the scorer
+    # train_grpo_ray builds and passes to score_rollouts) and the parallel pool
+    # via the RewardPathSpec, so W=1 and W>1 apply the same per-item cost.
+    pool = default_reward_pool(
+        num_workers=num_reward_actors, reward_repeats=cfg.reward_repeats
+    )
     result = train_grpo_ray(cfg_obj, reward_pool=pool)
     return extract_step_records(result)
 

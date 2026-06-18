@@ -66,12 +66,16 @@ class RewardPathSpec:
     weights: RewardWeights = RewardWeights()
     envelope: EmpiricalEnvelope = EmpiricalEnvelope()
     pidpm_checkpoint: str | None = None
+    pidpm_cost_repeats: int = 1  # per-item reward-cost knob (EXP-3); must match the serial path
 
     def build(self) -> tuple[MotionCodebook, PhysicsReward, PiDpmScorer]:
         """Rebuild the (codebook, reward, scorer) triple this spec describes."""
         codebook = MotionCodebook(self.skbm, self.codebook)
         reward = PhysicsReward(self.skbm, weights=self.weights, envelope=self.envelope)
-        scorer = PiDpmScorer(checkpoint_path=self.pidpm_checkpoint, device="cpu")
+        scorer = PiDpmScorer(
+            checkpoint_path=self.pidpm_checkpoint, device="cpu",
+            cost_repeats=self.pidpm_cost_repeats,
+        )
         return codebook, reward, scorer
 
 
