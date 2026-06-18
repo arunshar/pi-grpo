@@ -1,0 +1,20 @@
+# Optional bonus layer for contributors who use the pre-commit framework
+# (https://pre-commit.com). This is NOT the primary gate: the primary gate is
+# the pre-push hook (.githooks/pre-push) + scripts/ci_local.sh, which need no
+# extra install and run the EXACT CI commands.
+#
+# To use this layer (optional):
+#   pip install pre-commit
+#   pre-commit install
+#
+# rev is pinned to match the ruff version used in the pcrf env (ruff 0.15.x).
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.17
+    hooks:
+      # Lint and autofix. ruff config (line-length, selected rules, per-file
+      # ignores) is read from pyproject.toml [tool.ruff].
+      - id: ruff
+        args: [--fix]
+      # Formatter (ruff-format), to keep style consistent.
+      - id: ruff-format

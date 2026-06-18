@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# .githooks/pre-push
+#
+# Pre-push gate: runs the local CI mirror (scripts/ci_local.sh) and blocks the
+# push if it fails (non-zero exit). This catches the same lint/test failures CI
+# would catch, before they reach origin.
+#
+# Enable on a fresh clone with:
+#   make hooks            # or: git config core.hooksPath .githooks
+#
+# core.hooksPath is a LOCAL git config (not committed), so each clone opts in.
+
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+GATE="${REPO_ROOT}/scripts/ci_local.sh"
+
+if [ ! -x "${GATE}" ]; then
+  echo "pre-push: ${GATE} is missing or not executable; cannot verify. Blocking push." >&2
+  echo "pre-push: run 'chmod +x scripts/ci_local.sh' and retry." >&2
+  exit 1
+fi
+
+echo "pre-push: running local CI gate (scripts/ci_local.sh) ..."
+if bash "${GATE}"; then
+  echo "pre-push: local CI gate PASSED; allowing push."
+  exit 0
+fi
+
+echo "pre-push: local CI gate FAILED; blocking push." >&2
+echo "pre-push: fix the failures above, or bypass with 'git push --no-verify' (not recommended)." >&2
+exit 1

@@ -1,5 +1,5 @@
 .PHONY: help venv install lint type test test-property cov security audit \
-        bench paper paper-clean clean verify ci
+        bench paper paper-clean clean verify ci ci-local hooks
 
 PY      ?= python
 UV      ?= uv
@@ -17,8 +17,10 @@ help:
 	@echo "  security       bandit + pip-audit"
 	@echo "  bench          run benchmarks"
 	@echo "  paper          build the NeurIPS PDF"
-	@echo "  verify         lint + type + test + cov + security (FAANG-style)"
-	@echo "  ci             alias for verify"
+	@echo "  verify         lint + type + cov + security (uv venv, FAANG-style)"
+	@echo "  ci             local CI gate: scripts/ci_local.sh (mirrors GitHub Actions ci.yml)"
+	@echo "  ci-local       alias for ci"
+	@echo "  hooks          enable the pre-push gate (git config core.hooksPath .githooks)"
 
 venv:
 	$(UV) venv --python 3.11 $(VENV)
@@ -66,7 +68,18 @@ verify: lint type cov security
 	@echo ""
 	@echo "FAANG verify pass."
 
-ci: verify
+# Local CI gate that mirrors .github/workflows/ci.yml (lint-type-test job).
+# Runs the EXACT ruff/mypy/pytest commands CI runs, in the pcrf conda env.
+# This is the pre-push gate; run it before pushing.
+ci:
+	bash scripts/ci_local.sh
+
+ci-local: ci
+
+# Enable the committed pre-push hook on this clone (local config, not committed).
+hooks:
+	git config core.hooksPath .githooks
+	@echo "Enabled pre-push gate: core.hooksPath -> .githooks"
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage coverage.xml htmlcov
