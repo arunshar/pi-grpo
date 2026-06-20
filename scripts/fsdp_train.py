@@ -39,6 +39,7 @@ import torch.distributed as dist
 import torch.nn as nn
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp import MixedPrecision, ShardingStrategy
+from torch.distributed.device_mesh import init_device_mesh
 from torch.distributed.fsdp.wrap import (
     size_based_auto_wrap_policy,
     transformer_auto_wrap_policy,
@@ -200,6 +201,10 @@ def main(argv=None):
     ap.add_argument("--toy-dim", type=int, default=128, dest="toy_dim")
     ap.add_argument("--toy-layers", type=int, default=2, dest="toy_layers")
     ap.add_argument("--grad-checkpointing", action="store_true", dest="grad_ckpt")
+    ap.add_argument("--sharding", default="full_shard",
+                    choices=["full_shard", "hybrid_shard"],
+                    help="FSDP sharding: hybrid_shard shards intra-node (NVLink) and "
+                         "replicates inter-node (IB) for multi-node scaling (BUG_JOURNAL #77)")
     ap.add_argument("--out-dir", default=None, dest="out_dir",
                     help="defaults to <repo>/results")
     a = ap.parse_args(argv)
@@ -246,19 +251,36 @@ def main(argv=None):
             buffer_dtype=torch.bfloat16,
         )
 
+    # Sharding strategy. FULL_SHARD (ZeRO-3) shards params/grads/opt across ALL ranks, so
+    # across nodes every all-gather/reduce-scatter crosses the IB fabric. HYBRID_SHARD
+    # shards within a node and replicates across nodes, so only a gradient all-reduce
+    # crosses the node boundary (BUG_JOURNAL #77). HYBRID needs a 2D device mesh
+    # (replicate=nodes, shard=gpus_per_node); torchrun assigns ranks contiguously per
+    # node, so a row-major (nodes, local_world) mesh groups the shard dim within a node.
+    shard_strategy = (ShardingStrategy.HYBRID_SHARD if a.sharding == "hybrid_shard"
+                      else ShardingStrategy.FULL_SHARD)
+    device_mesh = None
+    if a.sharding == "hybrid_shard" and cuda and nodes > 1:
+        local_world = world // max(1, nodes)
+        device_mesh = init_device_mesh(
+            "cuda", (nodes, local_world), mesh_dim_names=("replicate", "shard"),
+        )
+
     fsdp_model = FSDP(
         model,
         auto_wrap_policy=auto_wrap,
-        sharding_strategy=ShardingStrategy.FULL_SHARD,  # ZeRO-3 equivalent
+        sharding_strategy=shard_strategy,
         mixed_precision=mp,
         device_id=local if cuda else None,
         use_orig_params=True,  # cleaner optimizer + works with grad checkpointing
         sync_module_states=False,
+        device_mesh=device_mesh,
     )
 
     if is_main:
-        print(f"[fsdp] wrapped OK; sharding=FULL_SHARD mp={'bf16' if mp else 'fp32'}",
-              flush=True)
+        mesh_desc = f"({nodes},{world // max(1, nodes)})" if device_mesh is not None else "none"
+        print(f"[fsdp] wrapped OK; sharding={shard_strategy.name} mesh={mesh_desc} "
+              f"mp={'bf16' if mp else 'fp32'}", flush=True)
 
     opt = torch.optim.AdamW(fsdp_model.parameters(), lr=a.lr)
 
@@ -339,14 +361,15 @@ def main(argv=None):
             "tokens_per_sec_global": tokens_per_sec,
             "tokens_per_sec_per_gpu": tokens_per_sec / world,
             "peak_mem_gb_rank0": round(peak_mem_gb, 3),
-            "sharding_strategy": "FULL_SHARD",
+            "sharding_strategy": shard_strategy.name,
             "mixed_precision": "bf16" if cuda else "fp32",
             "grad_checkpointing": bool(a.grad_ckpt),
             "final_loss": last_loss,
             "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
             "nodelist": os.environ.get("SLURM_JOB_NODELIST"),
         }
-        path = os.path.join(out_dir, f"fsdp_scaling_{world}.json")
+        tag = "" if a.sharding == "full_shard" else f"_{a.sharding}"
+        path = os.path.join(out_dir, f"fsdp_scaling_{world}{tag}.json")
         with open(path, "w") as f:
             json.dump(rec, f, indent=2)
         print(f"[fsdp] world={world} nodes={nodes} "

@@ -43,6 +43,7 @@ WARMUP="${FSDP_WARMUP:-3}"
 GRAD_CKPT="${FSDP_GRAD_CKPT:-1}"
 RANDOM_INIT="${FSDP_RANDOM_INIT:-0}"
 GPUS_PER_NODE="${FSDP_GPUS_PER_NODE:-${SLURM_GPUS_ON_NODE:-4}}"
+SHARDING="${FSDP_SHARDING:-full_shard}"   # full_shard (default, baseline) | hybrid_shard (BUG_JOURNAL #77)
 
 # ---- c10d rendezvous endpoint: first node in the allocation is the master. ----
 MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
@@ -89,6 +90,7 @@ srun --kill-on-bad-exit=1 bash -lc "
         --rdzv-id=${SLURM_JOB_ID} \
         scripts/fsdp_train.py \
         --model \"${MODEL}\" --batch ${PER_GPU_BATCH} --seq-len ${SEQ_LEN} \
+        --sharding ${SHARDING} \
         --steps ${STEPS} --warmup ${WARMUP} ${EXTRA[*]:-}
     '
 "
