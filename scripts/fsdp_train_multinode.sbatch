@@ -74,8 +74,11 @@ srun --kill-on-bad-exit=1 bash -lc "
       export PYTHONPATH=\"${REPO_ROOT}:\${PYTHONPATH:-}\"
       export NCCL_DEBUG=WARN OMP_NUM_THREADS=8
       export TOKENIZERS_PARALLELISM=false
-      # IB fabric for inter-node NCCL; disable the docker bridge / loopback ifaces.
-      export NCCL_SOCKET_IFNAME=^lo,docker0
+      # PIN to the single IB interface. The Agate nodes are dual-homed (aes0
+      # 10.31.96.x + ib0 10.31.104.x); a bare ^lo,docker0 exclude leaves BOTH, so
+      # ranks pick mismatched interfaces and the first cross-node collective
+      # deadlocks (BUG_JOURNAL #76). Pinning ib0 lets native IB (mlx5_0) come up.
+      export NCCL_SOCKET_IFNAME=ib0
       echo \"[fsdp-2node] task host=\$(hostname) SLURM_PROCID=\${SLURM_PROCID} node_rank=\${SLURM_NODEID}\"
       torchrun \
         --nnodes=${SLURM_NNODES} \
