@@ -86,7 +86,7 @@ class ToyBlock(nn.Module):
         self.mlp = nn.Sequential(nn.Linear(dim, 4 * dim), nn.GELU(), nn.Linear(4 * dim, dim))
         self.norm2 = nn.LayerNorm(dim)
 
-    def forward(self, x):  # noqa: D401
+    def forward(self, x):
         a, _ = self.attn(x, x, x, need_weights=False)
         x = self.norm1(x + a)
         x = self.norm2(x + self.mlp(x))
@@ -232,7 +232,7 @@ def main(argv=None):
             )
             if is_main:
                 print("[fsdp] gradient checkpointing enabled (use_reentrant=False)", flush=True)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             if is_main:
                 print(f"[fsdp] grad-checkpointing not enabled: {e}", flush=True)
 

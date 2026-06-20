@@ -34,6 +34,7 @@ Outputs: results/profile_step.json and results/profile_step.md (markdown table).
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib.util
 import json
 import platform
@@ -299,10 +300,8 @@ def _profile(run_one_step, n_warmup: int, n_active: int, with_flops: bool, trace
             _sync()
             per_step_times.append(time.perf_counter() - t0)
     if trace_path:
-        try:
+        with contextlib.suppress(Exception):
             prof.export_chrome_trace(trace_path)
-        except Exception:
-            pass
     return prof, per_step_times, last_out
 
 
