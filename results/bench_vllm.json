@@ -1,0 +1,93 @@
+{
+  "model": "Qwen/Qwen2-7B-Instruct",
+  "dtype": "bfloat16",
+  "gpu": "NVIDIA H100",
+  "num_prompts": 128,
+  "max_new_tokens": 128,
+  "temperature": 0.0,
+  "vllm_batch_sizes": [
+    1,
+    8,
+    32,
+    128
+  ],
+  "hf_batch_size": 8,
+  "smoke": false,
+  "env": {
+    "python": "3.12.13",
+    "hostname": "e2",
+    "hf_home": "/scratch.global/arunshar/hf_cache",
+    "torch": "2.11.0+cu130",
+    "cuda": "13.0",
+    "vllm": "0.23.0",
+    "transformers": "5.12.0"
+  },
+  "vllm": [
+    {
+      "engine": "vllm",
+      "batch_size": 1,
+      "num_prompts": 128,
+      "max_new_tokens": 128,
+      "total_output_tokens": 16384,
+      "wall_s": 124.8105867288541,
+      "throughput_tok_s": 131.27091562828377,
+      "req_latency_p50_s": 0.9750146839069203,
+      "req_latency_p95_s": 0.9760545955505222,
+      "req_latency_mean_s": 0.9750763235097111,
+      "notes": "offline LLM engine, ignore_eos, greedy"
+    },
+    {
+      "engine": "vllm",
+      "batch_size": 8,
+      "num_prompts": 128,
+      "max_new_tokens": 128,
+      "total_output_tokens": 16384,
+      "wall_s": 16.337568928021938,
+      "throughput_tok_s": 1002.8419817038032,
+      "req_latency_p50_s": 1.003522926592268,
+      "req_latency_p95_s": 1.2867448141332716,
+      "req_latency_mean_s": 1.021091442584293,
+      "notes": "offline LLM engine, ignore_eos, greedy"
+    },
+    {
+      "engine": "vllm",
+      "batch_size": 32,
+      "num_prompts": 128,
+      "max_new_tokens": 128,
+      "total_output_tokens": 16384,
+      "wall_s": 4.153704680968076,
+      "throughput_tok_s": 3944.4306368409157,
+      "req_latency_p50_s": 1.038130747503601,
+      "req_latency_p95_s": 1.0396830348763615,
+      "req_latency_mean_s": 1.0384175347280689,
+      "notes": "offline LLM engine, ignore_eos, greedy"
+    },
+    {
+      "engine": "vllm",
+      "batch_size": 128,
+      "num_prompts": 128,
+      "max_new_tokens": 128,
+      "total_output_tokens": 16384,
+      "wall_s": 1.2087920010089874,
+      "throughput_tok_s": 13554.027480595632,
+      "req_latency_p50_s": 1.2087578689679503,
+      "req_latency_p95_s": 1.2087578689679503,
+      "req_latency_mean_s": 1.2087578689679503,
+      "notes": "offline LLM engine, ignore_eos, greedy"
+    }
+  ],
+  "hf": {
+    "engine": "hf_generate",
+    "batch_size": 8,
+    "num_prompts": 128,
+    "max_new_tokens": 128,
+    "total_output_tokens": 16384,
+    "wall_s": 36.33692558296025,
+    "throughput_tok_s": 450.8912005390757,
+    "req_latency_p50_s": 2.2865445534698665,
+    "req_latency_p95_s": 2.336180208949372,
+    "req_latency_mean_s": 2.269714875452337,
+    "notes": "AutoModelForCausalLM.generate, left-pad, greedy, eos disabled"
+  },
+  "speedup_best_vllm_over_hf": 30.060527826648052
+}

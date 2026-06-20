@@ -1,0 +1,17 @@
+{
+  "kernel": "fused_rmsnorm_triton",
+  "status": "validated",
+  "device": "NVIDIA H100",
+  "shape": [
+    4096,
+    3584
+  ],
+  "dtype": "float32",
+  "allclose": true,
+  "max_abs_err": 2.86102294921875e-06,
+  "atol": 0.02,
+  "rtol": 0.02,
+  "eager_ms": 0.2231680005788803,
+  "triton_ms": 0.07184000313282013,
+  "speedup_x": 3.1064586699179295
+}

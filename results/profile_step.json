@@ -1,0 +1,140 @@
+{
+  "target": "llm-grpo",
+  "env": {
+    "torch": "2.11.0+cu130",
+    "cuda_available": true,
+    "python": "3.12.13",
+    "host": "e2"
+  },
+  "gpu": {
+    "device_name": "NVIDIA H100",
+    "gpu_key": "h100",
+    "peak_tflops": 989.0,
+    "cuda_available": true
+  },
+  "meta": {
+    "n_trainable_params": 10092544,
+    "n_base_params": 7625709056,
+    "hidden_size": 3584,
+    "n_layers": 28,
+    "n_sequences": 8,
+    "max_new_tokens": 160,
+    "model": "Qwen/Qwen2-7B-Instruct"
+  },
+  "step": {
+    "n_warmup": 1,
+    "n_active": 3,
+    "median_step_s": 4.352045790059492,
+    "min_step_s": 4.138928466010839,
+    "max_step_s": 4.355003886856139,
+    "per_step_s": [
+      4.352045790059492,
+      4.355003886856139,
+      4.138928466010839
+    ],
+    "total_self_op_us": 8634582.968999464
+  },
+  "mfu": {
+    "flops_per_step": 200933916137927.0,
+    "flops_source": "profiler (with_flops)",
+    "achieved_tflops": 46.16999127097426,
+    "mfu": 0.04668350987965041
+  },
+  "top_ops": [
+    {
+      "op": "aten::mm",
+      "self_cuda_us": 0.0,
+      "self_cpu_us": 1290757.150000097,
+      "cuda_total_us": 0.0,
+      "cpu_total_us": 1792749.9690002063,
+      "count": 68305,
+      "flops": 190308824645632.0
+    },
+    {
+      "op": "cudaLaunchKernel",
+      "self_cuda_us": 0.0,
+      "self_cpu_us": 1181934.0629993386,
+      "cuda_total_us": 0.0,
+      "cpu_total_us": 1192044.9339993352,
+      "count": 305329,
+      "flops": 0.0
+    },
+    {
+      "op": "aten::mul",
+      "self_cuda_us": 0.0,
+      "self_cpu_us": 550567.9069998651,
+      "cuda_total_us": 0.0,
+      "cpu_total_us": 833190.8059998755,
+      "count": 75518,
+      "flops": 20255222303.0
+    },
+    {
+      "op": "aten::addmm",
+      "self_cuda_us": 0.0,
+      "self_cpu_us": 479954.9799998794,
+      "cuda_total_us": 0.0,
+      "cpu_total_us": 627733.1909998251,
+      "count": 16716,
+      "flops": 10572816973824.0
+    },
+    {
+      "op": "aten::matmul",
+      "self_cuda_us": 0.0,
+      "self_cpu_us": 415482.88199955487,
+      "cuda_total_us": 0.0,
+      "cpu_total_us": 2353878.0199997253,
+      "count": 66590,
+      "flops": 0.0
+    },
+    {
+      "op": "aten::_cudnn_attention_forward",
+      "self_cuda_us": 0.0,
+      "self_cpu_us": 359290.09300006245,
+      "cuda_total_us": 0.0,
+      "cpu_total_us": 462156.4460000177,
+      "count": 5572,
+      "flops": 0.0
+    },
+    {
+      "op": "aten::copy_",
+      "self_cuda_us": 0.0,
+      "self_cpu_us": 358389.77700013923,
+      "cuda_total_us": 0.0,
+      "cpu_total_us": 676328.97999993,
+      "count": 72420,
+      "flops": 0.0
+    },
+    {
+      "op": "aten::add",
+      "self_cuda_us": 0.0,
+      "self_cpu_us": 348727.99200004555,
+      "cuda_total_us": 0.0,
+      "cpu_total_us": 550118.6049999398,
+      "count": 56273,
+      "flops": 5858921128.0
+    },
+    {
+      "op": "aten::_to_copy",
+      "self_cuda_us": 0.0,
+      "self_cpu_us": 291455.1360004686,
+      "cuda_total_us": 0.0,
+      "cpu_total_us": 1180567.9490001514,
+      "count": 69610,
+      "flops": 0.0
+    },
+    {
+      "op": "aten::linear",
+      "self_cuda_us": 0.0,
+      "self_cpu_us": 287251.3010001862,
+      "cuda_total_us": 0.0,
+      "cpu_total_us": 3658325.4679997806,
+      "count": 83107,
+      "flops": 0.0
+    }
+  ],
+  "caveats": [
+    "step time + op ranking are MEASURED by torch.profiler",
+    "MFU denominator is the analytic vendor bf16 dense peak (gpu_estimator), so MFU is an upper-bound ratio, not an SM-utilization counter",
+    "achieved FLOPs is profiler-measured"
+  ]
+}
