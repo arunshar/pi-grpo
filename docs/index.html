@@ -1,0 +1,84 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pi-GRPO: Physics-informed reinforcement-learning post-training for trajectory generation ...</title>
+<meta name="description" content="Physics-informed reinforcement-learning post-training for trajectory generation that treats hard physical constraints as a reward floor, so a policy optimized with PPO, DPO, or GRPO improves task quality without learning to produce physically impossible trajectories.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Noto+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbfcfe;--panel:#fff;--ink:#16202c;--mut:#5b6776;--line:#e6eaf0;--acc:#2257d6;--acc2:#0e9f6e;--warn:#b45309;--chip:#eef2f9;--code:#f3f5f9}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1116;--panel:#161b22;--ink:#e7ecf3;--mut:#9aa6b4;--line:#252c37;--acc:#6ea8fe;--acc2:#54d6a0;--warn:#ffb454;--chip:#1b212b;--code:#11151b}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.65;font-size:16px}
+h1,h2,h3{font-family:Montserrat,system-ui,sans-serif}
+a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:980px;margin:0 auto;padding:0 22px}
+header.hero{padding:54px 0 26px;text-align:center;border-bottom:1px solid var(--line)}
+.kept{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut);font-weight:700}
+h1.title{font-size:38px;line-height:1.12;margin:14px 0 6px;font-weight:800}
+.subtitle{font-size:18px;color:var(--mut);max-width:780px;margin:0 auto 8px}
+.authors{margin:14px 0 4px;font-size:16px}.aff{color:var(--mut);font-size:14px}
+.links{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:20px 0 4px}
+.btn{display:inline-flex;align-items:center;gap:7px;background:var(--ink);color:var(--bg);padding:8px 15px;border-radius:999px;font-weight:600;font-size:14px}
+.btn.go{background:var(--acc);color:#fff}.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:hover{text-decoration:none;opacity:.92}
+.pills{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:16px 0 0}
+.pill{background:var(--chip);color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:600}
+section{padding:30px 0;border-bottom:1px solid var(--line)}
+h2{font-size:24px;margin:0 0 12px}h3{font-size:17px;margin:18px 0 6px}
+p{margin:10px 0}.lead{font-size:17px}
+.fig{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+.figcap{color:var(--mut);font-size:13.5px;margin-top:8px;text-align:center}
+.callout{border-left:4px solid var(--acc2);background:var(--panel);border-radius:0 10px 10px 0;padding:14px 16px;margin:14px 0}
+.callout.warn{border-left-color:var(--warn)}.callout b{font-family:Montserrat}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+th{background:var(--chip);font-family:Montserrat;font-size:13px}
+.ok{color:var(--acc2);font-weight:700}.scaf{color:var(--warn);font-weight:700}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;background:var(--code);padding:1px 6px;border-radius:5px}
+ul{margin:8px 0;padding-left:22px}li{margin:5px 0}
+footer{padding:26px 0 50px;color:var(--mut);font-size:13.5px;text-align:center}
+@media(max-width:740px){h1.title{font-size:30px}}
+</style></head><body>
+<header class="hero"><div class="wrap">
+  <div class="kept">Physics-Informed RL Post-Training</div>
+  <h1 class="title">Pi-GRPO</h1>
+  <div class="subtitle">Physics-informed reinforcement-learning post-training for trajectory generation that treats hard physical constraints as a reward floor, so a policy optimized with PPO, DPO, or GRPO improves task quality without learning to produce physically impossible trajectories.</div>
+  <div class="authors">Arun Sharma</div><div class="aff">University of Minnesota &middot; research-engineering project</div>
+  <div class="links">
+    <a class="btn go" href="https://arunshar.com/projects/pi-grpo/">Full paper</a>
+    <a class="btn alt" href="https://huggingface.co/spaces/Arun0808/pi-grpo">Live demo (Space)</a>
+    <a class="btn alt" href="https://arunshar.com/projects/pi-grpo/explained.html">Deep explainer</a>
+    <a class="btn alt" href="https://github.com/arunshar/pi-grpo">Code</a>
+  </div>
+  <div class="pills"><span class="pill">PPO / DPO / GRPO</span><span class="pill">Physics reward floor</span><span class="pill">Workshop paper (MOSS @ COLM 2026)</span></div>
+</div></header>
+<section><div class="wrap"><h2>Abstract</h2><p class="lead">RL post-training (PPO, DPO, GRPO) can reward-hack into physically impossible outputs. Pi-GRPO makes the physics a hard reward floor: the reward is a hybrid of the task reward and a term that heavily penalizes kinematic-constraint violations, so the optimizer is pushed into the feasible region first and then improves task quality within it. The same floor plugs into all three optimizers.</p>
+  <div class="callout warn"><b>Honest scope.</b> The RL training stack (PPO, DPO, GRPO under the hybrid physics reward) is <b>real and runs</b>. The headline result, hard-constraint violation rate driven from about <b>18% under vanilla DPO to about 0% with physics-augmented DPO</b> (KL bounded across the run), is the <b>workshop paper's reported experimental result</b> at workshop scale, not a large-scale production benchmark.</div></div></section>
+<section><div class="wrap"><h2>Architecture</h2><div class="fig"><svg viewBox="0 0 920 300" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pi-GRPO architecture"><style>
+.b{fill:#fff;stroke:#e6eaf0;stroke-width:1.5}
+.t{font-family:Montserrat,system-ui,sans-serif;font-size:13px;fill:#16202c}
+.s{font-family:'Noto Sans',system-ui,sans-serif;font-size:10.5px;fill:#5b6776}
+.real{stroke:#0e9f6e;stroke-width:2}
+.stub{stroke:#b45309;stroke-dasharray:5 4;stroke-width:2}
+.ar{stroke:#5b6776;stroke-width:1.6;fill:none;marker-end:url(#a)}
+.lg{font-family:'Noto Sans',system-ui,sans-serif;font-size:10.5px}
+</style>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5b6776"/></marker></defs>
+<rect class="b real" x="20" y="70" width="160" height="56" rx="10"/><text class="t" x="32" y="93">Trajectory policy</text><text class="s" x="32" y="111">PPO / DPO / GRPO</text>
+<rect class="b" x="250" y="70" width="150" height="56" rx="10"/><text class="t" x="262" y="100">Rollouts</text>
+<rect class="b real" x="470" y="44" width="230" height="58" rx="10"/><text class="t" x="482" y="67">Reward = task + physics floor</text><text class="s" x="482" y="85">hard constraints as a reward floor</text>
+<rect class="b" x="470" y="128" width="230" height="46" rx="10" style="stroke-dasharray:4 3"/><text class="s" x="482" y="156">cuts hard-constraint violations (paper result)</text>
+<rect class="b" x="760" y="70" width="140" height="56" rx="10"/><text class="t" x="772" y="100">Policy update</text>
+<path class="ar" d="M180,98 L248,98"/>
+<path class="ar" d="M400,90 C430,90 445,75 468,74"/>
+<path class="ar" d="M700,74 C730,74 740,92 758,96"/>
+<path class="ar" d="M830,126 C830,210 300,210 250,128" style="stroke-dasharray:4 3"/><text class="s" x="420" y="206">policy-improvement loop</text>
+<text class="s" x="20" y="250">physics-informed RL stack (code real); headline violation reduction is the workshop paper's reported result</text>
+<text class="lg" x="14" y="288" fill="#0e9f6e">green = real and tested</text><text class="lg" x="210" y="288" fill="#b45309">dashed amber = stub / target (off-the-shelf or roadmap)</text></svg>
+<div class="figcap">Green = real and tested; dashed amber = stub or target (off-the-shelf or roadmap).</div></div></div></section>
+<section><div class="wrap"><h2>What is real vs scaffold</h2><table><thead><tr><th>Component</th><th>Status</th></tr></thead><tbody><tr><td>RL stack (PPO / DPO / GRPO) + physics reward</td><td><span class="ok">Real</span> &middot; Real, runnable</td></tr><tr><td>Physics-floor reward (kinematic penalty)</td><td><span class="ok">Real</span> &middot; Real</td></tr><tr><td>~18% -> ~0% violation reduction</td><td><span class="scaf">Scaffold/Target</span> &middot; Paper's reported result (workshop scale)</td></tr><tr><td>Large-scale benchmark vs RLHF baselines</td><td><span class="scaf">Scaffold/Target</span> &middot; Next step, not done</td></tr></tbody></table></div></section>
+<section><div class="wrap"><h2>Validated output</h2><div class="callout">The RL stack and the physics-floor reward are runnable. The ~18%->0% hard-constraint-violation reduction is the workshop paper's reported result ("Physics as a Hard Reward Floor", MOSS @ COLM 2026), not re-run at scale here. See <a href="https://github.com/arunshar/pi-grpo/blob/main/docs/EVIDENCE.md">docs/EVIDENCE.md</a>, the explainer, and the paper.</div>
+  <p class="lead">You can open the <a href="https://huggingface.co/spaces/Arun0808/pi-grpo">live demo</a> to run it, read the <a href="https://arunshar.com/projects/pi-grpo/">full paper</a>, or go deep in the <a href="https://arunshar.com/projects/pi-grpo/explained.html">explainer</a>.</p></div></section>
+<footer><div class="wrap">Research-engineering project. Honest scope stated above; reproduced results are in docs/EVIDENCE.md, leaderboard numbers are targets.
+  <br>Built by Arun Sharma &middot; <a href="https://arunshar.com/projects/pi-grpo/">paper</a> &middot; <a href="https://github.com/arunshar/pi-grpo">code</a> &middot; <a href="https://huggingface.co/spaces/Arun0808/pi-grpo">demo</a> &middot; <a href="https://arunshar.com/projects/pi-grpo/explained.html">explainer</a></div></footer>
+</body></html>
